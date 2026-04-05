@@ -193,12 +193,12 @@ const styles = {
     },
 
    headerRow: {
-    backgroundColor: "#E6E6E6", // fond un peu plus foncé
+    backgroundColor: "#E6E6E6", 
 },
 
 th: {
-    color: "#111111",        // texte plus foncé
-    fontWeight: "500",       // plus épais
+    color: "#111111",   
+    fontWeight: "500",       
     padding: "12px",
     textAlign: "center",
     borderBottom: "2px solid #CCC"
