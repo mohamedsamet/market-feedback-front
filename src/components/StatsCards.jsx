@@ -19,10 +19,11 @@ const StatsCards = ({ events }) => {
         <div style={styles.container}>
             {cards.map(card => (
                 <div key={card.label} style={{ ...styles.card, borderLeft: `6px solid ${card.color}` }}>
-                    <div>
-                        <p style={styles.label}>{card.label}</p>
-                        <p style={styles.value}>{card.value}</p>
-                    </div>
+                    
+                    <p style={styles.label}>{card.label}</p>
+
+                    <p style={styles.valueRight}>{card.value}</p>
+
                 </div>
             ))}
         </div>
@@ -37,17 +38,24 @@ const styles = {
     },
 
     card: {
-        backgroundColor: "#ffffff",
-        borderRadius: "14px",
-        padding: "18px",
-        boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
-        border: "1px solid #F0F0F0",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        transition: "0.2s ease",
-        cursor: "pointer"
-    },
+    backgroundColor: "#ffffff",
+    borderRadius: "14px",
+    padding: "18px",
+    boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
+    border: "1px solid #F0F0F0",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    transition: "0.2s ease",
+    cursor: "pointer"
+},
+valueRight: {
+    fontSize: "28px",
+    fontWeight: "600",
+    color: "#111827",
+    margin: "0",
+    textAlign: "right"
+},
 
     label: {
         fontSize: "12px",

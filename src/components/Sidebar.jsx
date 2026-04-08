@@ -2,25 +2,27 @@ import {
     DashboardOutlined,
     FileTextOutlined,
     ApiOutlined,
-    CheckCircleFilled
+    CheckCircleFilled,
+    SettingOutlined
 } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom"; // Import de la logique
 
 const Sidebar = ({ activePage }) => {
+    const navigate = useNavigate(); // Initialisation du navigateur
 
     const menuItems = [
-        { id: "dashboard", label: "Dashboard", icon: <DashboardOutlined /> },
-        { id: "events", label: "Market Events", icon: <FileTextOutlined /> },
-        { id: "sources", label: "Sources", icon: <ApiOutlined /> }
+        { id: "dashboard", label: "Dashboard", icon: <DashboardOutlined />, path: "/" },
+        { id: "events", label: "Market Events", icon: <FileTextOutlined />, path: "/" },
+        { id: "sources", label: "Sources", icon: <ApiOutlined />, path: "/" }
     ];
 
     return (
         <div style={styles.sidebar}>
 
-            <p style={styles.sectionTitle}>NAVIGATION</p>
-
             {menuItems.map(item => (
                 <div
                     key={item.id}
+                    onClick={() => navigate(item.path)} // Navigation au clic
                     style={{
                         ...styles.menuItem,
                         ...(activePage === item.id ? styles.activeItem : {})
@@ -42,14 +44,28 @@ const Sidebar = ({ activePage }) => {
                 </div>
             ))}
 
-            <div style={styles.statusSection}>
-                <p style={styles.sectionTitle}>STATUT</p>
-                <div style={styles.statusRow}>
-                    <CheckCircleFilled style={{ color: "#3B6D11", fontSize: "14px" }} />
-                    <span style={styles.statusText}>Collecte active</span>
+            <div style={styles.bottom}>
+                <div 
+                    onClick={() => navigate('/settings')} // Navigation vers Settings
+                    style={{ 
+                        ...styles.menuItem, 
+                        ...styles.settingsItem,
+                        backgroundColor: activePage === 'settings' ? '#EBF3FB' : '#F3F4F6' // État actif visuel
+                    }}
+                >
+                    <SettingOutlined style={{
+                        ...styles.icon,
+                        color: activePage === 'settings' ? "#185FA5" : "#444"
+                    }} />
+                    <span style={{
+                        ...styles.label,
+                        color: activePage === 'settings' ? "#185FA5" : "#444"
+                    }}>
+                        Settings
+                    </span>
                 </div>
             </div>
-
+            
         </div>
     );
 };
@@ -61,14 +77,8 @@ const styles = {
         borderRight: "0.5px solid #E0E0E0",
         padding: "16px 0",
         flexShrink: 0,
-        height: "100%"
-    },
-    sectionTitle: {
-        fontSize: "11px",
-        color: "#AAAAAA",
-        padding: "0 16px",
-        margin: "0 0 8px",
-        letterSpacing: "0.05em"
+        height: "100%",
+        position: "relative"
     },
     menuItem: {
         padding: "8px 16px",
@@ -88,18 +98,16 @@ const styles = {
     label: {
         fontSize: "13px"
     },
-    statusSection: {
-        marginTop: "24px"
+    settingsItem: {
+        backgroundColor: "#F3F4F6",   
+        border: "1px solid #E5E7EB",
+        margin: "0 10px", // Petit ajustement pour ne pas coller aux bords si besoin
+        borderRadius: "4px"
     },
-    statusRow: {
-        padding: "8px 16px",
-        display: "flex",
-        alignItems: "center",
-        gap: "8px"
-    },
-    statusText: {
-        fontSize: "12px",
-        color: "#666"
+    bottom: {
+        position: "absolute",
+        bottom: "20px",
+        width: "100%",
     }
 };
 

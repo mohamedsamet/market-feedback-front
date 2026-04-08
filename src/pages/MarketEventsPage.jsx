@@ -68,7 +68,7 @@ const MarketEventsPage = () => {
                                 <thead>
                                     <tr style={styles.headerRow}>
                                         <th style={{ ...styles.th, width: "100px" }}>ID</th>
-                                        <th style={styles.th}>Titre</th>
+                                        <th style={{ ...styles.th }}>Titre</th>
                                         <th style={{ ...styles.th, width: "150px" }}>Source</th>
                                         <th style={{ ...styles.th, width: "120px" }}>Date</th>
                                     </tr>
@@ -91,25 +91,21 @@ const MarketEventsPage = () => {
                                             }}
                                             onClick={() => setSelectedEvent(event)}
                                         >
-                                            {/* ID */}
-                                            <td style={{ ...styles.td, ...styles.id }} title={event.id}>
+                                            <td style={{ ...styles.td, ...styles.id, ...styles.right }}>
                                                 {event.id}
                                             </td>
 
-                                            {/* TITLE */}
-                                            <td style={{ ...styles.td, ...styles.titleCell }}>
+                                            <td style={{ ...styles.td, ...styles.titleCell, ...styles.left }}>
                                                 {event.content?.substring(0, 80)}
                                             </td>
 
-                                            {/* SOURCE */}
-                                            <td style={styles.td}>
+                                            <td style={{ ...styles.td, ...styles.left }}>
                                                 <span style={styles.source}>
                                                     {new URL(event.sourceUrl).hostname}
                                                 </span>
                                             </td>
 
-                                            {/* DATE */}
-                                            <td style={{ ...styles.td, ...styles.date }}>
+                                            <td style={{ ...styles.td, ...styles.date, ...styles.right }}>
                                                 {new Date(event.creationDate).toLocaleDateString("fr-FR")}
                                             </td>
                                         </tr>
@@ -127,8 +123,8 @@ const MarketEventsPage = () => {
             />
         </div>
     );
-    
 };
+
 const styles = {
     page: {
         height: "100vh",
@@ -137,33 +133,32 @@ const styles = {
         backgroundColor: "#F5F5F5",
         fontFamily: "Arial, sans-serif"
     },
-
     body: {
         display: "flex",
         flex: 1,
         overflow: "hidden"
     },
-
     main: {
         flex: 1,
         padding: "24px",
         overflowY: "auto"
     },
-
+    left: { textAlign: "left" },
+    right: { textAlign: "right" },
     title: {
         fontSize: "18px",
-        fontWeight: "500",
+        fontWeight: "bold",
         color: "#1A1A1A",
-        margin: "0 0 20px"
+        margin: "0 0 20px",
+        textAlign: "left",
+        
     },
-
     tableContainer: {
         backgroundColor: "white",
         border: "0.5px solid #E0E0E0",
         borderRadius: "12px",
         overflow: "hidden"
     },
-
     toolbar: {
         padding: "12px 20px",
         borderBottom: "0.5px solid #E0E0E0",
@@ -171,7 +166,6 @@ const styles = {
         alignItems: "center",
         justifyContent: "space-between"
     },
-
     search: {
         fontSize: "13px",
         padding: "6px 12px",
@@ -180,36 +174,21 @@ const styles = {
         width: "200px",
         outline: "none"
     },
-
-    count: {
-        fontSize: "12px",
-        color: "#888"
+    count: { fontSize: "12px", color: "#888" },
+    table: { width: "100%", borderCollapse: "collapse", tableLayout: "fixed" },
+    headerRow: { backgroundColor: "#E6E6E6" },
+    th: {
+        color: "#111111",
+        fontWeight: "700",
+        padding: "12px",
+        textAlign: "center",
+        borderBottom: "2px solid #CCC"
     },
-
-    table: {
-        width: "100%",
-        borderCollapse: "collapse",
-        tableLayout: "fixed"
-    },
-
-   headerRow: {
-    backgroundColor: "#E6E6E6", 
-},
-
-th: {
-    color: "#111111",   
-    fontWeight: "500",       
-    padding: "12px",
-    textAlign: "center",
-    borderBottom: "2px solid #CCC"
-},
-
     row: {
         borderBottom: "0.5px solid #F0F0F0",
         cursor: "pointer",
         transition: "0.2s"
     },
-
     td: {
         padding: "12px 20px",
         fontSize: "13px",
@@ -218,24 +197,9 @@ th: {
         textOverflow: "ellipsis",
         whiteSpace: "nowrap"
     },
-
-    loading: {
-        textAlign: "center",
-        padding: "40px",
-        color: "#888"
-    },
-
-    id: {
-        fontFamily: "monospace",
-        fontWeight: "600",
-        color: "#1A1A1A"
-    },
-
-    titleCell: {
-        fontWeight: "500",
-        color: "#222"
-    },
-
+    loading: { textAlign: "center", padding: "40px", color: "#888" },
+    id: { fontFamily: "monospace", fontWeight: "600", color: "#1A1A1A" },
+    titleCell: { fontWeight: "500", color: "#222" },
     source: {
         backgroundColor: "#EEF3FF",
         color: "#185FA5",
@@ -244,11 +208,7 @@ th: {
         fontSize: "12px",
         fontWeight: "500"
     },
-
-    date: {
-        color: "#555",
-        fontWeight: "500"
-    }
+    date: { color: "#555", fontWeight: "500" }
 };
 
 export default MarketEventsPage;
