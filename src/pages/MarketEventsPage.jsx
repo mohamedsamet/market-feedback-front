@@ -12,24 +12,35 @@ const MarketEventsPage = () => {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
 
+    // pagination
+    const [page, setPage] = useState(0);
+    const [size] = useState(10);
+    const [totalPages, setTotalPages] = useState(0);
+
+    // 🔥 IMPORTANT : total global (base de données)
+    const [totalElements, setTotalElements] = useState(0);
+
     useEffect(() => {
-        getAllMarketEvents()
+        setLoading(true);
+
+        getAllMarketEvents({ search, page, size })
             .then(data => {
-                setEvents(data);
+                setEvents(data.content);
+                setTotalPages(data.totalPages);
+
+                // 🔥 FIX IMPORTANT
+                setTotalElements(data.totalElements);
+
                 setLoading(false);
             })
             .catch(error => {
                 console.error("Erreur chargement :", error);
                 setLoading(false);
             });
-    }, []);
+
+    }, [search, page]);
 
     const handleClose = () => setSelectedEvent(null);
-
-    const filteredEvents = events.filter(event =>
-        event.content?.toLowerCase().includes(search.toLowerCase()) ||
-        event.sourceUrl?.toLowerCase().includes(search.toLowerCase())
-    );
 
     return (
         <div style={styles.page}>
@@ -44,8 +55,11 @@ const MarketEventsPage = () => {
 
                     <p style={styles.title}>Market Events</p>
 
-                    <StatsCards events={events} />
-
+                    {/* 🔥 FIX : stats globales */}
+<StatsCards
+    totalEvents={totalElements}
+    events={events}
+/>
                     <div style={styles.tableContainer}>
 
                         <div style={styles.toolbar}>
@@ -53,65 +67,97 @@ const MarketEventsPage = () => {
                                 type="text"
                                 placeholder="Rechercher..."
                                 value={search}
-                                onChange={e => setSearch(e.target.value)}
+                                onChange={e => {
+                                    setSearch(e.target.value);
+                                    setPage(0);
+                                }}
                                 style={styles.search}
                             />
+
+                            {/* 🔥 FIX ICI */}
                             <span style={styles.count}>
-                                {filteredEvents.length} événements
+                                {totalElements} événements
                             </span>
                         </div>
 
                         {loading ? (
                             <p style={styles.loading}>Chargement...</p>
                         ) : (
-                            <table style={styles.table}>
-                                <thead>
-                                    <tr style={styles.headerRow}>
-                                        <th style={{ ...styles.th, width: "100px" }}>ID</th>
-                                        <th style={{ ...styles.th }}>Titre</th>
-                                        <th style={{ ...styles.th, width: "150px" }}>Source</th>
-                                        <th style={{ ...styles.th, width: "120px" }}>Date</th>
-                                    </tr>
-                                </thead>
-
-                                <tbody>
-                                    {filteredEvents.map((event, index) => (
-                                        <tr
-                                            key={event.id}
-                                            style={{
-                                                ...styles.row,
-                                                backgroundColor: index % 2 === 0 ? "white" : "#F9F9F9"
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = "#F0F7FF";
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor =
-                                                    index % 2 === 0 ? "white" : "#F9F9F9";
-                                            }}
-                                            onClick={() => setSelectedEvent(event)}
-                                        >
-                                            <td style={{ ...styles.td, ...styles.id, ...styles.right }}>
-                                                {event.id}
-                                            </td>
-
-                                            <td style={{ ...styles.td, ...styles.titleCell, ...styles.left }}>
-                                                {event.content?.substring(0, 80)}
-                                            </td>
-
-                                            <td style={{ ...styles.td, ...styles.left }}>
-                                                <span style={styles.source}>
-                                                    {new URL(event.sourceUrl).hostname}
-                                                </span>
-                                            </td>
-
-                                            <td style={{ ...styles.td, ...styles.date, ...styles.right }}>
-                                                {new Date(event.creationDate).toLocaleDateString("fr-FR")}
-                                            </td>
+                            <>
+                                <table style={styles.table}>
+                                    <thead>
+                                        <tr style={styles.headerRow}>
+                                            <th style={{ ...styles.th, width: "100px" }}>ID</th>
+                                            <th style={{ ...styles.th }}>Titre</th>
+                                            <th style={{ ...styles.th, width: "150px" }}>Source</th>
+                                            <th style={{ ...styles.th, width: "120px" }}>Date</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+
+                                    <tbody>
+                                        {events.map((event, index) => (
+                                            <tr
+                                                key={event.id}
+                                                style={{
+                                                    ...styles.row,
+                                                    backgroundColor: index % 2 === 0 ? "white" : "#F9F9F9"
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.backgroundColor = "#F0F7FF";
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.backgroundColor =
+                                                        index % 2 === 0 ? "white" : "#F9F9F9";
+                                                }}
+                                                onClick={() => setSelectedEvent(event)}
+                                            >
+                                                <td style={{ ...styles.td, ...styles.id, ...styles.right }}>
+                                                    {event.id}
+                                                </td>
+
+                                                <td style={{ ...styles.td, ...styles.titleCell, ...styles.left }}>
+                                                    {event.content?.substring(0, 80)}
+                                                </td>
+
+                                                <td style={{ ...styles.td, ...styles.left }}>
+                                                    <span style={styles.source}>
+                                                        {event.sourceUrl
+                                                            ? new URL(event.sourceUrl).hostname
+                                                            : "N/A"}
+                                                    </span>
+                                                </td>
+
+                                                <td style={{ ...styles.td, ...styles.date, ...styles.right }}>
+                                                    {event.creationDate
+                                                        ? new Date(event.creationDate).toLocaleDateString("fr-FR")
+                                                        : "N/A"}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+
+                                {/* Pagination */}
+                                <div style={styles.pagination}>
+                                    <button
+                                        onClick={() => setPage(page - 1)}
+                                        disabled={page === 0}
+                                    >
+                                        Précédent
+                                    </button>
+
+                                    <span>
+                                        Page {page + 1} / {totalPages}
+                                    </span>
+
+                                    <button
+                                        onClick={() => setPage(page + 1)}
+                                        disabled={page + 1 >= totalPages}
+                                    >
+                                        Suivant
+                                    </button>
+                                </div>
+                            </>
                         )}
                     </div>
                 </div>
@@ -151,7 +197,6 @@ const styles = {
         color: "#1A1A1A",
         margin: "0 0 20px",
         textAlign: "left",
-        
     },
     tableContainer: {
         backgroundColor: "white",
@@ -208,7 +253,15 @@ const styles = {
         fontSize: "12px",
         fontWeight: "500"
     },
-    date: { color: "#555", fontWeight: "500" }
+    date: { color: "#555", fontWeight: "500" },
+
+    pagination: {
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        gap: "12px",
+        padding: "12px"
+    }
 };
 
 export default MarketEventsPage;

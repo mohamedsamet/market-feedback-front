@@ -1,13 +1,26 @@
-const StatsCards = ({ events }) => {
-    const total = events.length;
+const StatsCards = ({ totalEvents = 0, events = [] }) => {
+
+    const total = totalEvents; // 🔥 FIX PRINCIPAL
 
     const today = events.filter(event => {
+        if (!event.creationDate) return false;
         const eventDate = new Date(event.creationDate).toDateString();
         const todayDate = new Date().toDateString();
         return eventDate === todayDate;
     }).length;
 
-    const sources = [...new Set(events.map(e => new URL(e.sourceUrl).hostname))].length;
+    const sources = [...new Set(
+        events
+            .filter(e => e.sourceUrl)
+            .map(e => {
+                try {
+                    return new URL(e.sourceUrl).hostname;
+                } catch {
+                    return null;
+                }
+            })
+            .filter(Boolean)
+    )].length;
 
     const cards = [
         { label: "Total collecté", value: total, color: "#4F46E5" },
@@ -18,12 +31,14 @@ const StatsCards = ({ events }) => {
     return (
         <div style={styles.container}>
             {cards.map(card => (
-                <div key={card.label} style={{ ...styles.card, borderLeft: `6px solid ${card.color}` }}>
-                    
-                    <p style={styles.label}>{card.label}</p>
-
-                    <p style={styles.valueRight}>{card.value}</p>
-
+                <div key={card.label} style={{
+                    ...styles.card,
+                    borderLeft: `6px solid ${card.color}`
+                }}>
+                    <div>
+                        <p style={styles.label}>{card.label}</p>
+                        <p style={styles.value}>{card.value}</p>
+                    </div>
                 </div>
             ))}
         </div>
