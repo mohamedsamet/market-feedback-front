@@ -1,40 +1,15 @@
-const StatsCards = ({ totalEvents = 0, events = [] }) => {
-
-    const total = totalEvents; // 🔥 FIX PRINCIPAL
-
-    const today = events.filter(event => {
-        if (!event.creationDate) return false;
-        const eventDate = new Date(event.creationDate).toDateString();
-        const todayDate = new Date().toDateString();
-        return eventDate === todayDate;
-    }).length;
-
-    const sources = [...new Set(
-        events
-            .filter(e => e.sourceUrl)
-            .map(e => {
-                try {
-                    return new URL(e.sourceUrl).hostname;
-                } catch {
-                    return null;
-                }
-            })
-            .filter(Boolean)
-    )].length;
+const StatsCards = ({ totalEvents = 0, todayCount = 0, sourcesCount = 0 }) => {
 
     const cards = [
-        { label: "Total collecté", value: total, color: "#4F46E5" },
-        { label: "Aujourd'hui", value: today, color: "#4F46E5" },
-        { label: "Sources actives", value: sources, color: "#4F46E5" }
+        { label: "Total collecté",  value: totalEvents,  color: "#4F46E5" },
+        { label: "Aujourd'hui",     value: todayCount,   color: "#4F46E5" },
+        { label: "Sources actives", value: sourcesCount, color: "#4F46E5" }
     ];
 
     return (
         <div style={styles.container}>
             {cards.map(card => (
-                <div key={card.label} style={{
-                    ...styles.card,
-                    borderLeft: `6px solid ${card.color}`
-                }}>
+                <div key={card.label} style={{ ...styles.card, borderLeft: `6px solid ${card.color}` }}>
                     <div>
                         <p style={styles.label}>{card.label}</p>
                         <p style={styles.value}>{card.value}</p>
@@ -44,6 +19,7 @@ const StatsCards = ({ totalEvents = 0, events = [] }) => {
         </div>
     );
 };
+
 const styles = {
     container: {
         display: "grid",
@@ -51,33 +27,22 @@ const styles = {
         gap: "16px",
         marginBottom: "24px"
     },
-
     card: {
-    backgroundColor: "#ffffff",
-    borderRadius: "14px",
-    padding: "18px",
-    boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
-    border: "1px solid #F0F0F0",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    transition: "0.2s ease",
-    cursor: "pointer"
-},
-valueRight: {
-    fontSize: "28px",
-    fontWeight: "600",
-    color: "#111827",
-    margin: "0",
-    textAlign: "right"
-},
-
+        backgroundColor: "#ffffff",
+        borderRadius: "14px",
+        padding: "18px",
+        boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
+        border: "1px solid #F0F0F0",
+        display: "flex",
+        alignItems: "center",
+        transition: "0.2s ease",
+        cursor: "pointer"
+    },
     label: {
         fontSize: "12px",
         color: "#6B7280",
         margin: "0 0 6px"
     },
-
     value: {
         fontSize: "28px",
         fontWeight: "800",
@@ -85,4 +50,5 @@ valueRight: {
         margin: "0"
     }
 };
+
 export default StatsCards;
