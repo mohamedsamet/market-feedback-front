@@ -11,7 +11,7 @@ export const getAllMarketEvents = async ({ search = '', source = '', page = 0, s
         throw error;
     }
 };
-
+//stats
 export const fetchStats = async () => {
     try {
         const response = await fetch(`${API_URL}/stats`);
@@ -26,4 +26,21 @@ export const fetchStats = async () => {
         console.error("Erreur lors du chargement des stats :", error.message);
         throw error;
     }
+};
+// supprimer un seul
+export const deleteMarketEvent = async (id) => {
+    const response = await fetch(`${API_URL}/${id}`, {
+        method: 'DELETE'
+    });
+    if (!response.ok) throw new Error(`Erreur suppression : ${response.status}`);
+};
+
+// supprimer plusieurs
+export const deleteMarketEvents = async (ids) => {
+    const response = await fetch(API_URL, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ids)
+    });
+    if (!response.ok) throw new Error(`Erreur suppression : ${response.status}`);
 };
