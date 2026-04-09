@@ -21,7 +21,6 @@ export const fetchStats = async () => {
         }
 
         return await response.json();
-        // { today: 42 }
 
     } catch (error) {
         console.error("Erreur lors du chargement des stats :", error.message);
