@@ -1,18 +1,9 @@
-const StatsCards = ({ events }) => {
-    const total = events.length;
-
-    const today = events.filter(event => {
-        const eventDate = new Date(event.creationDate).toDateString();
-        const todayDate = new Date().toDateString();
-        return eventDate === todayDate;
-    }).length;
-
-    const sources = [...new Set(events.map(e => new URL(e.sourceUrl).hostname))].length;
+const StatsCards = ({ totalEvents = 0, todayCount = 0, sourcesCount = 0 }) => {
 
     const cards = [
-        { label: "Total collecté", value: total, color: "#4F46E5" },
-        { label: "Aujourd'hui", value: today, color: "#4F46E5" },
-        { label: "Sources actives", value: sources, color: "#4F46E5" }
+        { label: "Total collecté",  value: totalEvents,  color: "#4F46E5" },
+        { label: "Aujourd'hui",     value: todayCount,   color: "#4F46E5" },
+        { label: "Sources actives", value: sourcesCount, color: "#4F46E5" }
     ];
 
     return (
@@ -28,6 +19,7 @@ const StatsCards = ({ events }) => {
         </div>
     );
 };
+
 const styles = {
     container: {
         display: "grid",
@@ -35,7 +27,6 @@ const styles = {
         gap: "16px",
         marginBottom: "24px"
     },
-
     card: {
         backgroundColor: "#ffffff",
         borderRadius: "14px",
@@ -44,17 +35,14 @@ const styles = {
         border: "1px solid #F0F0F0",
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
         transition: "0.2s ease",
         cursor: "pointer"
     },
-
     label: {
         fontSize: "12px",
         color: "#6B7280",
         margin: "0 0 6px"
     },
-
     value: {
         fontSize: "28px",
         fontWeight: "800",
@@ -62,4 +50,5 @@ const styles = {
         margin: "0"
     }
 };
+
 export default StatsCards;
