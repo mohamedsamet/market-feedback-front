@@ -1,8 +1,27 @@
-const MarketEventModal = ({ event, onClose }) => {
+const MarketEventSummaryModal = ({ event, onClose }) => {
     if (!event) return null;
 
-    const hostname = (url) => { try { return new URL(url).hostname; } catch { return url; } };
-    const fmtDate  = (d)   => d ? new Date(d).toLocaleString("fr-FR") : "N/A";
+    const cleanEnContent = (raw) => {
+        if (!raw) return "N/A";
+        const colonIndex = raw.indexOf(":");
+        if (colonIndex !== -1) return raw.substring(colonIndex + 1).trim();
+        return raw;
+    };
+
+    const fmtDate = (d) => d ? new Date(d).toLocaleString("fr-FR") : "N/A";
+
+    /* deterministic theme badge color */
+    const PALETTES = [
+        { bg: "#EFF6FF", color: "#1D4ED8", border: "#DBEAFE" },
+        { bg: "#F0FDF4", color: "#15803D", border: "#BBF7D0" },
+        { bg: "#FFF7ED", color: "#C2410C", border: "#FED7AA" },
+        { bg: "#FAF5FF", color: "#7E22CE", border: "#E9D5FF" },
+        { bg: "#FFF1F2", color: "#BE123C", border: "#FECDD3" },
+        { bg: "#F0F9FF", color: "#0369A1", border: "#BAE6FD" },
+    ];
+    const palette = PALETTES[Math.abs(
+        [...(event.theme || "")].reduce((acc, c) => acc + c.charCodeAt(0), 0)
+    ) % PALETTES.length];
 
     return (
         <div style={s.overlay} onClick={onClose}>
@@ -13,12 +32,12 @@ const MarketEventModal = ({ event, onClose }) => {
                     <div style={s.headerLeft}>
                         <div style={s.iconWrap}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ color: "#2563EB" }}>
-                                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 5h6"
+                                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 5h6M9 12h6M9 16h4"
                                     stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
                             </svg>
                         </div>
                         <div>
-                            <h2 style={s.title}>Détail de l'événement</h2>
+                            <h2 style={s.title}>Détail du résumé</h2>
                             <p style={s.subtitle}>ID #{event.id}</p>
                         </div>
                     </div>
@@ -32,25 +51,41 @@ const MarketEventModal = ({ event, onClose }) => {
                 {/* ── Meta row ── */}
                 <div style={s.metaRow}>
                     <div style={s.metaItem}>
-                        <span style={s.metaLabel}>Source</span>
-                        {event.sourceUrl
-                            ? <a href={event.sourceUrl} target="_blank" rel="noreferrer" style={s.link}>
-                                {hostname(event.sourceUrl)}
-                              </a>
+                        <span style={s.metaLabel}>Thème</span>
+                        {event.theme
+                            ? <span style={{ ...s.themeBadge, backgroundColor: palette.bg, color: palette.color, borderColor: palette.border }}>
+                                {event.theme}
+                              </span>
                             : <span style={s.naText}>—</span>}
                     </div>
                     <div style={s.metaDivider} />
                     <div style={s.metaItem}>
-                        <span style={s.metaLabel}>Date de création</span>
-                        <span style={s.metaValue}>{fmtDate(event.creationDate)}</span>
+                        <span style={s.metaLabel}>Généré le</span>
+                        <span style={s.metaValue}>{fmtDate(event.genereLe)}</span>
                     </div>
                 </div>
 
-                {/* ── Content ── */}
+                {/* ── FR Content ── */}
                 <div style={s.section}>
-                    <p style={s.sectionLabel}>Contenu</p>
+                    <div style={s.sectionHeader}>
+                        <span style={s.langFlag}>🇫🇷</span>
+                        <p style={s.sectionLabel}>Résumé en Français</p>
+                    </div>
                     <div style={s.contentBox}>
-                        {event.content || <span style={s.naText}>Aucun contenu disponible.</span>}
+                        {event.contenuFr ?? <span style={s.naText}>Aucun contenu disponible.</span>}
+                    </div>
+                </div>
+
+                {/* ── EN Content ── */}
+                <div style={{ ...s.section, marginTop: "16px" }}>
+                    <div style={s.sectionHeader}>
+                        <span style={s.langFlag}>🇬🇧</span>
+                        <p style={s.sectionLabel}>Résumé en Anglais</p>
+                    </div>
+                    <div style={s.contentBox}>
+                        {cleanEnContent(event.contenuEn) !== "N/A"
+                            ? cleanEnContent(event.contenuEn)
+                            : <span style={s.naText}>Aucun contenu disponible.</span>}
                     </div>
                 </div>
 
@@ -73,7 +108,7 @@ const s = {
     },
     modal: {
         backgroundColor: "white", borderRadius: "14px",
-        width: "62%", maxWidth: "720px", maxHeight: "82vh",
+        width: "64%", maxWidth: "760px", maxHeight: "85vh",
         overflowY: "auto", display: "flex", flexDirection: "column",
         boxShadow: "0 20px 60px rgba(15,23,42,0.18)",
         border: "1px solid #E2E8F0",
@@ -83,6 +118,7 @@ const s = {
     header: {
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "22px 28px 18px", borderBottom: "1px solid #F1F5F9",
+        position: "sticky", top: 0, backgroundColor: "white", zIndex: 1,
     },
     headerLeft:  { display: "flex", alignItems: "center", gap: "14px" },
     iconWrap: {
@@ -100,31 +136,38 @@ const s = {
 
     /* meta row */
     metaRow: {
-        display: "flex", alignItems: "stretch", gap: 0,
+        display: "flex", alignItems: "stretch",
         margin: "20px 28px", backgroundColor: "#F8FAFC",
         border: "1px solid #E2E8F0", borderRadius: "10px", overflow: "hidden",
     },
-    metaItem:    { flex: 1, padding: "14px 18px", display: "flex", flexDirection: "column", gap: "4px" },
+    metaItem:    { flex: 1, padding: "14px 18px", display: "flex", flexDirection: "column", gap: "6px" },
     metaDivider: { width: "1px", backgroundColor: "#E2E8F0", flexShrink: 0 },
     metaLabel:   { fontSize: "11px", color: "#94A3B8", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" },
     metaValue:   { fontSize: "13px", color: "#1E293B", fontWeight: "500" },
-    link:        { fontSize: "13px", color: "#2563EB", fontWeight: "500", textDecoration: "none" },
+    themeBadge: {
+        display: "inline-block", padding: "3px 10px", borderRadius: "6px",
+        fontSize: "12px", fontWeight: "500", border: "1px solid",
+        alignSelf: "flex-start",
+    },
     naText:      { fontSize: "13px", color: "#CBD5E1" },
 
-    /* content */
-    section:      { padding: "0 28px 8px" },
-    sectionLabel: { fontSize: "11px", color: "#94A3B8", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 10px" },
+    /* sections */
+    section:       { padding: "0 28px" },
+    sectionHeader: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" },
+    langFlag:      { fontSize: "16px", lineHeight: 1 },
+    sectionLabel:  { fontSize: "11px", color: "#94A3B8", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 },
     contentBox: {
         backgroundColor: "#F8FAFC", border: "1px solid #E2E8F0",
         borderRadius: "10px", padding: "16px 20px",
-        fontSize: "13.5px", lineHeight: "1.75", color: "#334155",
+        fontSize: "13.5px", lineHeight: "1.8", color: "#334155",
         whiteSpace: "pre-wrap", wordBreak: "break-word",
     },
 
     /* footer */
     footer: {
         display: "flex", justifyContent: "flex-end",
-        padding: "18px 28px", borderTop: "1px solid #F1F5F9", marginTop: "8px",
+        padding: "18px 28px", borderTop: "1px solid #F1F5F9", marginTop: "20px",
+        position: "sticky", bottom: 0, backgroundColor: "white",
     },
     closeBtn: {
         padding: "8px 20px", fontSize: "13px", fontWeight: "500",
@@ -133,4 +176,4 @@ const s = {
     },
 };
 
-export default MarketEventModal;
+export default MarketEventSummaryModal;

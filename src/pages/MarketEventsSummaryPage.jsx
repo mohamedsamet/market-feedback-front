@@ -1,80 +1,69 @@
 import { useState, useEffect } from "react";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
-import MarketEventModal from "../components/MarketEventModal";
 import StatsCards from "../components/StatsCards";
-import { getAllMarketEvents, fetchStats, deleteMarketEvent, deleteMarketEvents } from "../services/marketEventService";
+import MarketEventSummaryModal from "../components/MarketEventSummaryModal";
+import { getAllMarketEventsSummary, fetchSummaryStats, fetchThemes, deleteMarketEventSummary, deleteMarketEventsSummary } from "../services/marketEventSummaryService";
 import { DeleteOutlined } from '@ant-design/icons';
 
-/* ─── helpers ─────────────────────────────────────────────────────────────── */
-const cleanContent = (raw) => {
-    if (!raw) return "N/A";
-    let text = raw;
-    const descMatch    = text.match(/description=([^,}\]]+)/);
-    const contentMatch = text.match(/content=([^,}\]]+)/);
-    if (descMatch)    return descMatch[1].trim();
-    if (contentMatch) return contentMatch[1].trim();
-    try {
-        const parsed = JSON.parse(text);
-        return parsed.description || parsed.content || parsed.text || parsed.title || text;
-    } catch (_) {}
-    const htmlMatch = text.match(/<p[^>]*>(.*?)<\/p>/is);
-    if (htmlMatch) return htmlMatch[1].replace(/<[^>]+>/g, "").trim();
-    if (text.startsWith("{")) {
-        const lastBrace = text.lastIndexOf("}");
-        if (lastBrace !== -1) text = text.substring(lastBrace + 1).trim();
-        if (text.length > 10) return text;
-        const lastEq = raw.lastIndexOf("=");
-        if (lastEq !== -1) return raw.substring(lastEq + 1).replace(/[{}]/g, "").trim();
-    }
-    return text;
-};
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString("fr-FR") : "N/A";
 
-const hostname = (url) => { try { return new URL(url).hostname; } catch { return "N/A"; } };
-const fmtDate  = (d)   => d ? new Date(d).toLocaleDateString("fr-FR") : "N/A";
+/* ─── theme badge colors (cycling palette) ─────────────────────────────────── */
+const THEME_PALETTES = [
+    { bg: "#EFF6FF", color: "#1D4ED8", border: "#DBEAFE" },
+    { bg: "#F0FDF4", color: "#15803D", border: "#BBF7D0" },
+    { bg: "#FFF7ED", color: "#C2410C", border: "#FED7AA" },
+    { bg: "#FAF5FF", color: "#7E22CE", border: "#E9D5FF" },
+    { bg: "#FFF1F2", color: "#BE123C", border: "#FECDD3" },
+    { bg: "#F0F9FF", color: "#0369A1", border: "#BAE6FD" },
+];
+const themeColor = (theme = "") => THEME_PALETTES[Math.abs(
+    [...theme].reduce((acc, c) => acc + c.charCodeAt(0), 0)
+) % THEME_PALETTES.length];
 
 /* ─── component ────────────────────────────────────────────────────────────── */
-const MarketEventsPage = () => {
-    const [events,            setEvents]            = useState([]);
-    const [selectedEvent,     setSelectedEvent]     = useState(null);
-    const [loading,           setLoading]           = useState(true);
-    const [search,            setSearch]            = useState("");
-    const [source,            setSource]            = useState("");
-    const [availableSources,  setAvailableSources]  = useState([]);
-    const [page,              setPage]              = useState(0);
-    const [size]                                    = useState(10);
-    const [totalPages,        setTotalPages]        = useState(0);
-    const [totalElements,     setTotalElements]     = useState(0);
-    const [todayCount,        setTodayCount]        = useState(0);
-    const [sourcesCount,      setSourcesCount]      = useState(0);
-    const [selectedIds,       setSelectedIds]       = useState(new Set());
-    const [confirmModal,      setConfirmModal]      = useState(null);
-    const [hoveredRow,        setHoveredRow]        = useState(null);
+const MarketEventsSummaryPage = () => {
+    const [events,           setEvents]           = useState([]);
+    const [selectedEvent,    setSelectedEvent]    = useState(null);
+    const [loading,          setLoading]          = useState(true);
+    const [search,           setSearch]           = useState("");
+    const [theme,            setTheme]            = useState("");
+    const [availableThemes,  setAvailableThemes]  = useState([]);
+    const [page,             setPage]             = useState(0);
+    const [size]                                  = useState(10);
+    const [totalPages,       setTotalPages]       = useState(0);
+    const [totalElements,    setTotalElements]    = useState(0);
+    const [todayCount,       setTodayCount]       = useState(0);
+    const [sourcesCount,     setSourcesCount]     = useState(0);
+    const [selectedIds,      setSelectedIds]      = useState(new Set());
+    const [confirmModal,     setConfirmModal]     = useState(null);
+    const [hoveredRow,       setHoveredRow]       = useState(null);
 
     useEffect(() => {
-        fetchStats()
+        fetchThemes()
+            .then(data => setAvailableThemes(data))
+            .catch(err  => console.error("Erreur thèmes :", err));
+    }, []);
+
+    useEffect(() => {
+        fetchSummaryStats()
             .then(data => { setTodayCount(data.today); setSourcesCount(data.sources); })
             .catch(err  => console.error("Erreur stats :", err));
     }, []);
 
     const loadEvents = () => {
         setLoading(true);
-        getAllMarketEvents({ search, source, page, size })
+        getAllMarketEventsSummary({ search, theme, page, size })
             .then(data => {
                 setEvents(data.content);
                 setTotalPages(data.totalPages);
                 setTotalElements(data.totalElements);
                 setLoading(false);
-                const newSources = data.content
-                    .filter(e => e.sourceUrl)
-                    .map(e => hostname(e.sourceUrl))
-                    .filter(Boolean);
-                setAvailableSources(prev => [...new Set([...prev, ...newSources])]);
             })
             .catch(error => { console.error("Erreur chargement :", error); setLoading(false); });
     };
 
-    useEffect(() => { loadEvents(); }, [search, source, page]);
+    useEffect(() => { loadEvents(); }, [search, theme, page]);
 
     useEffect(() => {
         const enabled  = localStorage.getItem("autoRefresh") === "true";
@@ -96,15 +85,15 @@ const MarketEventsPage = () => {
     const handleConfirm = async () => {
         try {
             if (confirmModal.type === "one") {
-                await deleteMarketEvent(confirmModal.id);
+                await deleteMarketEventSummary(confirmModal.id);
                 setSelectedIds(prev => { const n = new Set(prev); n.delete(confirmModal.id); return n; });
             } else {
-                await deleteMarketEvents([...selectedIds]);
+                await deleteMarketEventsSummary([...selectedIds]);
                 setSelectedIds(new Set());
             }
             setConfirmModal(null);
             loadEvents();
-            fetchStats().then(data => { setTodayCount(data.today); setSourcesCount(data.sources); });
+            fetchSummaryStats().then(data => { setTodayCount(data.today); setSourcesCount(data.sources); });
         } catch (err) { console.error("Erreur suppression :", err); }
     };
 
@@ -115,15 +104,15 @@ const MarketEventsPage = () => {
         <div style={s.page}>
             <Header />
             <div style={s.body}>
-                <Sidebar activePage="events" />
+                <Sidebar activePage="summary" />
 
                 <main style={s.main}>
 
                     {/* ── Page header ── */}
                     <div style={s.pageHeader}>
                         <div>
-                            <h1 style={s.pageTitle}>Market Events</h1>
-                            <p style={s.pageSubtitle}>Suivi des événements de marché</p>
+                            <h1 style={s.pageTitle}>Market Events Summary</h1>
+                            <p style={s.pageSubtitle}>Résumés thématiques des événements de marché</p>
                         </div>
                     </div>
 
@@ -147,7 +136,7 @@ const MarketEventsPage = () => {
                                     </svg>
                                     <input
                                         type="text"
-                                        placeholder="Rechercher un événement…"
+                                        placeholder="Rechercher un résumé…"
                                         value={search}
                                         onChange={e => { setSearch(e.target.value); setPage(0); }}
                                         style={s.search}
@@ -155,13 +144,13 @@ const MarketEventsPage = () => {
                                 </div>
 
                                 <select
-                                    value={source}
-                                    onChange={e => { setSource(e.target.value); setPage(0); }}
+                                    value={theme}
+                                    onChange={e => { setTheme(e.target.value); setPage(0); }}
                                     style={s.select}
                                 >
-                                    <option value="">Toutes les sources</option>
-                                    {availableSources.map(src => (
-                                        <option key={src} value={src}>{src}</option>
+                                    <option value="">Tous les thèmes</option>
+                                    {availableThemes.map(t => (
+                                        <option key={t} value={t}>{t}</option>
                                     ))}
                                 </select>
                             </div>
@@ -173,7 +162,7 @@ const MarketEventsPage = () => {
                                         Supprimer ({selectedIds.size})
                                     </button>
                                 )}
-                                <span style={s.countBadge}>{totalElements} événements</span>
+                                <span style={s.countBadge}>{totalElements} résumés</span>
                             </div>
                         </div>
 
@@ -186,9 +175,10 @@ const MarketEventsPage = () => {
                         ) : events.length === 0 ? (
                             <div style={s.emptyWrap}>
                                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style={{ color: "#CBD5E1" }}>
-                                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 5h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 5h6M9 12h6M9 16h4"
+                                        stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                                 </svg>
-                                <p style={s.emptyText}>Aucun événement trouvé</p>
+                                <p style={s.emptyText}>Aucun résumé trouvé</p>
                             </div>
                         ) : (
                             <>
@@ -204,10 +194,10 @@ const MarketEventsPage = () => {
                                                         style={s.checkbox}
                                                     />
                                                 </th>
-                                                <th style={{ ...s.th, width: 90 }}>ID</th>
-                                                <th style={{ ...s.th, textAlign: "left" }}>Contenu</th>
-                                                <th style={{ ...s.th, width: 180, textAlign: "left" }}>Source</th>
+                                                <th style={{ ...s.th, width: 80 }}>ID</th>
+                                                <th style={{ ...s.th, width: 190, textAlign: "left" }}>Thème</th>
                                                 <th style={{ ...s.th, width: 110 }}>Date</th>
+                                                <th style={{ ...s.th, textAlign: "left" }}>Résumé</th>
                                                 <th style={{ ...s.th, width: 52 }}></th>
                                             </tr>
                                         </thead>
@@ -215,6 +205,7 @@ const MarketEventsPage = () => {
                                             {events.map((event) => {
                                                 const isSelected = selectedIds.has(event.id);
                                                 const isHovered  = hoveredRow === event.id;
+                                                const palette    = themeColor(event.theme);
                                                 const rowBg = isSelected
                                                     ? "#EFF6FF"
                                                     : isHovered ? "#F8FAFC" : "white";
@@ -240,18 +231,20 @@ const MarketEventsPage = () => {
                                                             #{event.id}
                                                         </td>
 
-                                                        <td style={{ ...s.td, ...s.tdContent }} onClick={() => setSelectedEvent(event)}>
-                                                            {cleanContent(event.content)?.substring(0, 140)}
-                                                        </td>
-
-                                                        <td style={s.td} onClick={() => setSelectedEvent(event)}>
-                                                            {event.sourceUrl
-                                                                ? <span style={s.sourceBadge}>{hostname(event.sourceUrl)}</span>
+                                                        <td style={{ ...s.td, textAlign: "left" }} onClick={() => setSelectedEvent(event)}>
+                                                            {event.theme
+                                                                ? <span style={{ ...s.themeBadge, backgroundColor: palette.bg, color: palette.color, borderColor: palette.border }}>
+                                                                    {event.theme.substring(0, 48)}
+                                                                  </span>
                                                                 : <span style={s.naText}>—</span>}
                                                         </td>
 
                                                         <td style={{ ...s.td, ...s.tdDate }} onClick={() => setSelectedEvent(event)}>
-                                                            {fmtDate(event.creationDate)}
+                                                            {fmtDate(event.genereLe)}
+                                                        </td>
+
+                                                        <td style={{ ...s.td, ...s.tdSummary }} onClick={() => setSelectedEvent(event)}>
+                                                            {event.contenuFr?.substring(0, 110)}
                                                         </td>
 
                                                         <td style={{ ...s.td, textAlign: "center" }} onClick={e => e.stopPropagation()}>
@@ -284,21 +277,15 @@ const MarketEventsPage = () => {
                                     </button>
 
                                     <div style={s.pageNumbers}>
-                                        {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-                                            const p = i;
-                                            return (
-                                                <button
-                                                    key={p}
-                                                    onClick={() => setPage(p)}
-                                                    style={{
-                                                        ...s.pageNum,
-                                                        ...(p === page ? s.pageNumActive : {}),
-                                                    }}
-                                                >
-                                                    {p + 1}
-                                                </button>
-                                            );
-                                        })}
+                                        {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => (
+                                            <button
+                                                key={i}
+                                                onClick={() => setPage(i)}
+                                                style={{ ...s.pageNum, ...(i === page ? s.pageNumActive : {}) }}
+                                            >
+                                                {i + 1}
+                                            </button>
+                                        ))}
                                         {totalPages > 7 && <span style={s.pageDots}>…</span>}
                                     </div>
 
@@ -317,7 +304,7 @@ const MarketEventsPage = () => {
             </div>
 
             {/* ── Detail modal ── */}
-            <MarketEventModal event={selectedEvent} onClose={() => setSelectedEvent(null)} />
+            <MarketEventSummaryModal event={selectedEvent} onClose={() => setSelectedEvent(null)} />
 
             {/* ── Confirm modal ── */}
             {confirmModal && (
@@ -332,8 +319,8 @@ const MarketEventsPage = () => {
                         <p style={s.confirmTitle}>Confirmer la suppression</p>
                         <p style={s.confirmText}>
                             {confirmModal.type === "one"
-                                ? "Cet événement sera définitivement supprimé. Cette action est irréversible."
-                                : `${selectedIds.size} événement(s) sélectionné(s) seront définitivement supprimés.`}
+                                ? "Ce résumé sera définitivement supprimé. Cette action est irréversible."
+                                : `${selectedIds.size} résumé(s) sélectionné(s) seront définitivement supprimés.`}
                         </p>
                         <div style={s.confirmActions}>
                             <button onClick={() => setConfirmModal(null)} style={s.cancelBtn}>Annuler</button>
@@ -350,20 +337,16 @@ const MarketEventsPage = () => {
 
 /* ─── styles ───────────────────────────────────────────────────────────────── */
 const s = {
-    /* layout */
     page:           { minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#F8FAFC", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" },
     body:           { display: "flex", flex: 1, overflow: "hidden" },
     main:           { flex: 1, padding: "28px 32px", overflowY: "auto" },
 
-    /* page header */
     pageHeader:     { display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "24px" },
     pageTitle:      { fontSize: "20px", fontWeight: "600", color: "#0F172A", margin: 0, letterSpacing: "-0.3px" },
     pageSubtitle:   { fontSize: "13px", color: "#94A3B8", margin: "3px 0 0", fontWeight: "400" },
 
-    /* card */
     card:           { backgroundColor: "white", border: "1px solid #E2E8F0", borderRadius: "12px", overflow: "hidden", boxShadow: "0 1px 3px rgba(15,23,42,0.04)" },
 
-    /* toolbar */
     toolbar:        { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid #F1F5F9", gap: "12px", flexWrap: "wrap" },
     toolbarLeft:    { display: "flex", alignItems: "center", gap: "10px" },
     toolbarRight:   { display: "flex", alignItems: "center", gap: "10px" },
@@ -374,13 +357,13 @@ const s = {
         fontSize: "13px", padding: "7px 12px 7px 32px",
         border: "1px solid #E2E8F0", borderRadius: "8px",
         width: "220px", outline: "none", color: "#0F172A",
-        backgroundColor: "#FAFAFA", transition: "border-color 0.15s",
+        backgroundColor: "#FAFAFA",
     },
     select: {
         fontSize: "13px", padding: "7px 30px 7px 12px",
         border: "1px solid #E2E8F0", borderRadius: "8px",
         outline: "none", cursor: "pointer", backgroundColor: "#FAFAFA",
-        color: "#0F172A", appearance: "none",
+        color: "#0F172A", appearance: "none", maxWidth: "200px",
         backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")`,
         backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
     },
@@ -394,7 +377,6 @@ const s = {
         cursor: "pointer", fontWeight: "500",
     },
 
-    /* table */
     tableWrap:      { overflowX: "auto" },
     table:          { width: "100%", borderCollapse: "collapse", tableLayout: "fixed" },
     thead:          { backgroundColor: "#F8FAFC" },
@@ -408,45 +390,39 @@ const s = {
     td:             { padding: "13px 16px", fontSize: "13px", color: "#334155", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
 
     tdId:           { fontFamily: "ui-monospace, 'SF Mono', monospace", fontSize: "12px", color: "#64748B", textAlign: "right", fontWeight: "500" },
-    tdContent:      { color: "#1E293B", fontWeight: "400", textAlign: "left" },
     tdDate:         { color: "#94A3B8", fontSize: "12px", fontWeight: "500", textAlign: "center" },
+    tdSummary:      { color: "#475569", fontWeight: "400", textAlign: "left" },
 
-    sourceBadge: {
-        display: "inline-block", backgroundColor: "#EFF6FF", color: "#1D4ED8",
-        padding: "3px 8px", borderRadius: "6px", fontSize: "11.5px",
-        fontWeight: "500", border: "1px solid #DBEAFE",
+    themeBadge: {
+        display: "inline-block", padding: "3px 9px", borderRadius: "6px",
+        fontSize: "11.5px", fontWeight: "500", border: "1px solid",
+        maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
     },
     naText:         { color: "#CBD5E1" },
-
     checkbox:       { width: "15px", height: "15px", accentColor: "#2563EB", cursor: "pointer" },
 
     deleteRowBtn: {
         background: "none", border: "1px solid #FECACA", cursor: "pointer",
         borderRadius: "6px", padding: "4px 6px", display: "flex",
         alignItems: "center", justifyContent: "center",
-        transition: "opacity 0.15s, background-color 0.15s",
-        backgroundColor: "#FEF2F2",
+        transition: "opacity 0.15s", backgroundColor: "#FEF2F2",
     },
 
-    /* loading / empty */
     loadingWrap:    { display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", padding: "60px 0" },
     spinner: {
         width: "24px", height: "24px",
         border: "2.5px solid #E2E8F0", borderTop: "2.5px solid #2563EB",
-        borderRadius: "50%",
-        animation: "spin 0.7s linear infinite",
+        borderRadius: "50%", animation: "spin 0.7s linear infinite",
     },
     loadingText:    { fontSize: "13px", color: "#94A3B8" },
     emptyWrap:      { display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "60px 0" },
     emptyText:      { fontSize: "14px", color: "#94A3B8" },
 
-    /* pagination */
     pagination:     { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px", borderTop: "1px solid #F1F5F9" },
     pageBtn: {
         fontSize: "13px", padding: "6px 14px",
         border: "1px solid #E2E8F0", borderRadius: "8px",
-        cursor: "pointer", backgroundColor: "white", color: "#475569",
-        fontWeight: "500", transition: "background-color 0.15s",
+        cursor: "pointer", backgroundColor: "white", color: "#475569", fontWeight: "500",
     },
     pageNumbers:    { display: "flex", gap: "4px", alignItems: "center" },
     pageNum: {
@@ -454,13 +430,9 @@ const s = {
         fontSize: "13px", border: "1px solid transparent", borderRadius: "8px",
         cursor: "pointer", backgroundColor: "transparent", color: "#64748B", fontWeight: "500",
     },
-    pageNumActive: {
-        backgroundColor: "#2563EB", color: "white",
-        border: "1px solid #2563EB",
-    },
+    pageNumActive:  { backgroundColor: "#2563EB", color: "white", border: "1px solid #2563EB" },
     pageDots:       { fontSize: "13px", color: "#94A3B8", padding: "0 4px" },
 
-    /* confirm modal */
     overlay: {
         position: "fixed", inset: 0,
         backgroundColor: "rgba(15,23,42,0.45)",
@@ -485,24 +457,21 @@ const s = {
     cancelBtn: {
         padding: "8px 18px", fontSize: "13px",
         border: "1px solid #E2E8F0", borderRadius: "8px",
-        cursor: "pointer", backgroundColor: "white",
-        color: "#475569", fontWeight: "500",
+        cursor: "pointer", backgroundColor: "white", color: "#475569", fontWeight: "500",
     },
     confirmBtn: {
         display: "flex", alignItems: "center", gap: "6px",
         padding: "8px 18px", fontSize: "13px",
         border: "none", borderRadius: "8px",
-        cursor: "pointer", backgroundColor: "#A32D2D",
-        color: "white", fontWeight: "500",
+        cursor: "pointer", backgroundColor: "#A32D2D", color: "white", fontWeight: "500",
     },
 };
 
-/* inject spinner keyframes once */
-if (typeof document !== "undefined" && !document.getElementById("me-spin-style")) {
+if (typeof document !== "undefined" && !document.getElementById("mes-spin-style")) {
     const style = document.createElement("style");
-    style.id = "me-spin-style";
+    style.id = "mes-spin-style";
     style.textContent = "@keyframes spin { to { transform: rotate(360deg); } }";
     document.head.appendChild(style);
 }
 
-export default MarketEventsPage;
+export default MarketEventsSummaryPage;
