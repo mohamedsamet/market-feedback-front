@@ -10,51 +10,57 @@ import { DeleteOutlined } from '@ant-design/icons';
 const cleanContent = (raw) => {
     if (!raw) return "N/A";
     let text = raw;
-    const descMatch    = text.match(/description=([^,}\]]+)/);
-    const contentMatch = text.match(/content=([^,}\]]+)/);
-    if (descMatch)    return descMatch[1].trim();
-    if (contentMatch) return contentMatch[1].trim();
+
+    // 1. Format REST : description=..., url=
+    const restDescMatch = text.match(/description=(.+?),\s*url=/s);
+    if (restDescMatch) return restDescMatch[1].trim();
+
+    // 2. Format RSS flux complet : chercher dans item=[{
+    const itemSection = text.includes("item=[{")
+        ? text.substring(text.indexOf("item=[{"))
+        : text;
+    const descMatch = itemSection.match(/description=([^,}\]]+)/);
+    if (descMatch) return descMatch[1].trim();
+
+    // 3. Format JSON pur
     try {
         const parsed = JSON.parse(text);
         return parsed.description || parsed.content || parsed.text || parsed.title || text;
-    } catch (_) {}
+    } catch (_) { }
+
+    // 4. HTML <p>
     const htmlMatch = text.match(/<p[^>]*>(.*?)<\/p>/is);
     if (htmlMatch) return htmlMatch[1].replace(/<[^>]+>/g, "").trim();
-    if (text.startsWith("{")) {
-        const lastBrace = text.lastIndexOf("}");
-        if (lastBrace !== -1) text = text.substring(lastBrace + 1).trim();
-        if (text.length > 10) return text;
-        const lastEq = raw.lastIndexOf("=");
-        if (lastEq !== -1) return raw.substring(lastEq + 1).replace(/[{}]/g, "").trim();
-    }
-    return text;
+
+    // 5. Fallback
+    return text.length > 5 ? text : "N/A";
 };
 
 const hostname = (url) => { try { return new URL(url).hostname; } catch { return "N/A"; } };
-const fmtDate  = (d)   => d ? new Date(d).toLocaleDateString("fr-FR") : "N/A";
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString("fr-FR") : "N/A";
 
 /* ─── component ────────────────────────────────────────────────────────────── */
 const MarketEventsPage = () => {
-    const [events,            setEvents]            = useState([]);
-    const [selectedEvent,     setSelectedEvent]     = useState(null);
-    const [loading,           setLoading]           = useState(true);
-    const [search,            setSearch]            = useState("");
-    const [source,            setSource]            = useState("");
-    const [availableSources,  setAvailableSources]  = useState([]);
-    const [page,              setPage]              = useState(0);
-    const [size]                                    = useState(10);
-    const [totalPages,        setTotalPages]        = useState(0);
-    const [totalElements,     setTotalElements]     = useState(0);
-    const [todayCount,        setTodayCount]        = useState(0);
-    const [sourcesCount,      setSourcesCount]      = useState(0);
-    const [selectedIds,       setSelectedIds]       = useState(new Set());
-    const [confirmModal,      setConfirmModal]      = useState(null);
-    const [hoveredRow,        setHoveredRow]        = useState(null);
+    const [events, setEvents] = useState([]);
+    const [selectedEvent, setSelectedEvent] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState("");
+    const [source, setSource] = useState("");
+    const [availableSources, setAvailableSources] = useState([]);
+    const [page, setPage] = useState(0);
+    const [size] = useState(10);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+    const [todayCount, setTodayCount] = useState(0);
+    const [sourcesCount, setSourcesCount] = useState(0);
+    const [selectedIds, setSelectedIds] = useState(new Set());
+    const [confirmModal, setConfirmModal] = useState(null);
+    const [hoveredRow, setHoveredRow] = useState(null);
 
     useEffect(() => {
         fetchStats()
             .then(data => { setTodayCount(data.today); setSourcesCount(data.sources); })
-            .catch(err  => console.error("Erreur stats :", err));
+            .catch(err => console.error("Erreur stats :", err));
     }, []);
 
     const loadEvents = () => {
@@ -77,7 +83,7 @@ const MarketEventsPage = () => {
     useEffect(() => { loadEvents(); }, [search, source, page]);
 
     useEffect(() => {
-        const enabled  = localStorage.getItem("autoRefresh") === "true";
+        const enabled = localStorage.getItem("autoRefresh") === "true";
         const interval = parseInt(localStorage.getItem("refreshInterval") || "30") * 1000;
         if (!enabled) return;
         const timer = setInterval(loadEvents, interval);
@@ -90,8 +96,8 @@ const MarketEventsPage = () => {
     const toggleAll = () =>
         setSelectedIds(selectedIds.size === events.length ? new Set() : new Set(events.map(e => e.id)));
 
-    const confirmDeleteOne  = (id) => setConfirmModal({ type: "one", id });
-    const confirmDeleteMany = ()   => setConfirmModal({ type: "many" });
+    const confirmDeleteOne = (id) => setConfirmModal({ type: "one", id });
+    const confirmDeleteMany = () => setConfirmModal({ type: "many" });
 
     const handleConfirm = async () => {
         try {
@@ -108,7 +114,7 @@ const MarketEventsPage = () => {
         } catch (err) { console.error("Erreur suppression :", err); }
     };
 
-    const allChecked  = events.length > 0 && selectedIds.size === events.length;
+    const allChecked = events.length > 0 && selectedIds.size === events.length;
     const someChecked = selectedIds.size > 0;
 
     return (
@@ -142,8 +148,8 @@ const MarketEventsPage = () => {
                             <div style={s.toolbarLeft}>
                                 <div style={s.searchWrap}>
                                     <svg style={s.searchIcon} viewBox="0 0 16 16" fill="none">
-                                        <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.25"/>
-                                        <path d="M10 10l3.5 3.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round"/>
+                                        <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.25" />
+                                        <path d="M10 10l3.5 3.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
                                     </svg>
                                     <input
                                         type="text"
@@ -186,7 +192,7 @@ const MarketEventsPage = () => {
                         ) : events.length === 0 ? (
                             <div style={s.emptyWrap}>
                                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style={{ color: "#CBD5E1" }}>
-                                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 5h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 5h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                                 </svg>
                                 <p style={s.emptyText}>Aucun événement trouvé</p>
                             </div>
@@ -214,7 +220,7 @@ const MarketEventsPage = () => {
                                         <tbody>
                                             {events.map((event) => {
                                                 const isSelected = selectedIds.has(event.id);
-                                                const isHovered  = hoveredRow === event.id;
+                                                const isHovered = hoveredRow === event.id;
                                                 const rowBg = isSelected
                                                     ? "#EFF6FF"
                                                     : isHovered ? "#F8FAFC" : "white";
@@ -241,7 +247,7 @@ const MarketEventsPage = () => {
                                                         </td>
 
                                                         <td style={{ ...s.td, ...s.tdContent }} onClick={() => setSelectedEvent(event)}>
-                                                            {cleanContent(event.content)?.substring(0, 140)}
+                                                            {cleanContent(event.content)?.substring(0, 100)}{cleanContent(event.content)?.length > 100 ? "..." : ""}
                                                         </td>
 
                                                         <td style={s.td} onClick={() => setSelectedEvent(event)}>
@@ -326,7 +332,7 @@ const MarketEventsPage = () => {
                         <div style={s.confirmIconWrap}>
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ color: "#A32D2D" }}>
                                 <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
-                                    stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                                    stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         </div>
                         <p style={s.confirmTitle}>Confirmer la suppression</p>
@@ -351,25 +357,25 @@ const MarketEventsPage = () => {
 /* ─── styles ───────────────────────────────────────────────────────────────── */
 const s = {
     /* layout */
-    page:           { minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#F8FAFC", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" },
-    body:           { display: "flex", flex: 1, overflow: "hidden" },
-    main:           { flex: 1, padding: "28px 32px", overflowY: "auto" },
+    page: { minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#F8FAFC", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" },
+    body: { display: "flex", flex: 1, overflow: "hidden" },
+    main: { flex: 1, padding: "28px 32px", overflowY: "auto" },
 
     /* page header */
-    pageHeader:     { display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "24px" },
-    pageTitle:      { fontSize: "20px", fontWeight: "600", color: "#0F172A", margin: 0, letterSpacing: "-0.3px" },
-    pageSubtitle:   { fontSize: "13px", color: "#94A3B8", margin: "3px 0 0", fontWeight: "400" },
+    pageHeader: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "24px" },
+    pageTitle: { fontSize: "20px", fontWeight: "600", color: "#0F172A", margin: 0, letterSpacing: "-0.3px" },
+    pageSubtitle: { fontSize: "13px", color: "#94A3B8", margin: "3px 0 0", fontWeight: "400" },
 
     /* card */
-    card:           { backgroundColor: "white", border: "1px solid #E2E8F0", borderRadius: "12px", overflow: "hidden", boxShadow: "0 1px 3px rgba(15,23,42,0.04)" },
+    card: { backgroundColor: "white", border: "1px solid #E2E8F0", borderRadius: "12px", overflow: "hidden", boxShadow: "0 1px 3px rgba(15,23,42,0.04)" },
 
     /* toolbar */
-    toolbar:        { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid #F1F5F9", gap: "12px", flexWrap: "wrap" },
-    toolbarLeft:    { display: "flex", alignItems: "center", gap: "10px" },
-    toolbarRight:   { display: "flex", alignItems: "center", gap: "10px" },
+    toolbar: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid #F1F5F9", gap: "12px", flexWrap: "wrap" },
+    toolbarLeft: { display: "flex", alignItems: "center", gap: "10px" },
+    toolbarRight: { display: "flex", alignItems: "center", gap: "10px" },
 
-    searchWrap:     { position: "relative", display: "flex", alignItems: "center" },
-    searchIcon:     { position: "absolute", left: "10px", width: "14px", height: "14px", color: "#94A3B8", pointerEvents: "none" },
+    searchWrap: { position: "relative", display: "flex", alignItems: "center" },
+    searchIcon: { position: "absolute", left: "10px", width: "14px", height: "14px", color: "#94A3B8", pointerEvents: "none" },
     search: {
         fontSize: "13px", padding: "7px 12px 7px 32px",
         border: "1px solid #E2E8F0", borderRadius: "8px",
@@ -385,7 +391,7 @@ const s = {
         backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
     },
 
-    countBadge:     { fontSize: "12px", color: "#64748B", fontWeight: "500", backgroundColor: "#F1F5F9", padding: "4px 10px", borderRadius: "20px", border: "1px solid #E2E8F0" },
+    countBadge: { fontSize: "12px", color: "#64748B", fontWeight: "500", backgroundColor: "#F1F5F9", padding: "4px 10px", borderRadius: "20px", border: "1px solid #E2E8F0" },
     deleteBulkBtn: {
         display: "flex", alignItems: "center", gap: "6px",
         fontSize: "13px", padding: "6px 13px",
@@ -395,30 +401,30 @@ const s = {
     },
 
     /* table */
-    tableWrap:      { overflowX: "auto" },
-    table:          { width: "100%", borderCollapse: "collapse", tableLayout: "fixed" },
-    thead:          { backgroundColor: "#F8FAFC" },
+    tableWrap: { overflowX: "auto" },
+    table: { width: "100%", borderCollapse: "collapse", tableLayout: "fixed" },
+    thead: { backgroundColor: "#F8FAFC" },
     th: {
         color: "#64748B", fontWeight: "600", fontSize: "11px",
         letterSpacing: "0.06em", textTransform: "uppercase",
         padding: "11px 16px", textAlign: "center",
         borderBottom: "1px solid #E2E8F0", whiteSpace: "nowrap",
     },
-    row:            { borderBottom: "1px solid #F1F5F9", cursor: "pointer", transition: "background-color 0.1s" },
-    td:             { padding: "13px 16px", fontSize: "13px", color: "#334155", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+    row: { borderBottom: "1px solid #F1F5F9", cursor: "pointer", transition: "background-color 0.1s" },
+    td: { padding: "13px 16px", fontSize: "13px", color: "#334155", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
 
-    tdId:           { fontFamily: "ui-monospace, 'SF Mono', monospace", fontSize: "12px", color: "#64748B", textAlign: "right", fontWeight: "500" },
-    tdContent:      { color: "#1E293B", fontWeight: "400", textAlign: "left" },
-    tdDate:         { color: "#94A3B8", fontSize: "12px", fontWeight: "500", textAlign: "center" },
+    tdId: { fontFamily: "ui-monospace, 'SF Mono', monospace", fontSize: "12px", color: "#64748B", textAlign: "right", fontWeight: "500" },
+    tdContent: { color: "#1E293B", fontWeight: "400", textAlign: "left" },
+    tdDate: { color: "#94A3B8", fontSize: "12px", fontWeight: "500", textAlign: "center" },
 
     sourceBadge: {
         display: "inline-block", backgroundColor: "#EFF6FF", color: "#1D4ED8",
         padding: "3px 8px", borderRadius: "6px", fontSize: "11.5px",
         fontWeight: "500", border: "1px solid #DBEAFE",
     },
-    naText:         { color: "#CBD5E1" },
+    naText: { color: "#CBD5E1" },
 
-    checkbox:       { width: "15px", height: "15px", accentColor: "#2563EB", cursor: "pointer" },
+    checkbox: { width: "15px", height: "15px", accentColor: "#2563EB", cursor: "pointer" },
 
     deleteRowBtn: {
         background: "none", border: "1px solid #FECACA", cursor: "pointer",
@@ -429,26 +435,26 @@ const s = {
     },
 
     /* loading / empty */
-    loadingWrap:    { display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", padding: "60px 0" },
+    loadingWrap: { display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", padding: "60px 0" },
     spinner: {
         width: "24px", height: "24px",
         border: "2.5px solid #E2E8F0", borderTop: "2.5px solid #2563EB",
         borderRadius: "50%",
         animation: "spin 0.7s linear infinite",
     },
-    loadingText:    { fontSize: "13px", color: "#94A3B8" },
-    emptyWrap:      { display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "60px 0" },
-    emptyText:      { fontSize: "14px", color: "#94A3B8" },
+    loadingText: { fontSize: "13px", color: "#94A3B8" },
+    emptyWrap: { display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "60px 0" },
+    emptyText: { fontSize: "14px", color: "#94A3B8" },
 
     /* pagination */
-    pagination:     { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px", borderTop: "1px solid #F1F5F9" },
+    pagination: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px", borderTop: "1px solid #F1F5F9" },
     pageBtn: {
         fontSize: "13px", padding: "6px 14px",
         border: "1px solid #E2E8F0", borderRadius: "8px",
         cursor: "pointer", backgroundColor: "white", color: "#475569",
         fontWeight: "500", transition: "background-color 0.15s",
     },
-    pageNumbers:    { display: "flex", gap: "4px", alignItems: "center" },
+    pageNumbers: { display: "flex", gap: "4px", alignItems: "center" },
     pageNum: {
         width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center",
         fontSize: "13px", border: "1px solid transparent", borderRadius: "8px",
@@ -458,7 +464,7 @@ const s = {
         backgroundColor: "#2563EB", color: "white",
         border: "1px solid #2563EB",
     },
-    pageDots:       { fontSize: "13px", color: "#94A3B8", padding: "0 4px" },
+    pageDots: { fontSize: "13px", color: "#94A3B8", padding: "0 4px" },
 
     /* confirm modal */
     overlay: {
@@ -479,8 +485,8 @@ const s = {
         display: "flex", alignItems: "center", justifyContent: "center",
         marginBottom: "16px",
     },
-    confirmTitle:   { fontSize: "15px", fontWeight: "600", color: "#0F172A", margin: "0 0 8px" },
-    confirmText:    { fontSize: "13px", color: "#64748B", margin: "0 0 24px", lineHeight: "1.6" },
+    confirmTitle: { fontSize: "15px", fontWeight: "600", color: "#0F172A", margin: "0 0 8px" },
+    confirmText: { fontSize: "13px", color: "#64748B", margin: "0 0 24px", lineHeight: "1.6" },
     confirmActions: { display: "flex", justifyContent: "flex-end", gap: "10px" },
     cancelBtn: {
         padding: "8px 18px", fontSize: "13px",
