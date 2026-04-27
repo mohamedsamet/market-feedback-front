@@ -46,8 +46,6 @@ const Sidebar = ({ activePage }) => {
     return (
         <aside style={s.sidebar}>
 
-            {/* ── Nav section label ── */}
-            <div style={s.sectionLabel}>Navigation</div>
 
             {/* ── Main nav ── */}
             <nav style={s.nav}>
