@@ -2,113 +2,122 @@ import {
     DashboardOutlined,
     FileTextOutlined,
     ApiOutlined,
-    CheckCircleFilled,
-    SettingOutlined
+    SettingOutlined,
+    BarChartOutlined,
 } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom"; // Import de la logique
+import { useNavigate } from "react-router-dom";
+
+const NAV_ITEMS = [
+    { id: "dashboard", label: "Dashboard",      icon: DashboardOutlined, path: "/dashboard" },
+    { id: "events",    label: "Market Events",  icon: FileTextOutlined,  path: "/"          },
+    { id: "summary",   label: "Events Summary", icon: BarChartOutlined,  path: "/summary"   },
+    { id: "sources",   label: "Sources",        icon: ApiOutlined,       path: "/sources"   },
+];
 
 const Sidebar = ({ activePage }) => {
-    const navigate = useNavigate(); // Initialisation du navigateur
+    const navigate = useNavigate();
 
-    const menuItems = [
-        { id: "dashboard", label: "Dashboard", icon: <DashboardOutlined />, path: "/" },
-        { id: "events", label: "Market Events", icon: <FileTextOutlined />, path: "/" },
-        { id: "sources", label: "Sources", icon: <ApiOutlined />, path: "/" }
-    ];
+    const NavItem = ({ id, label, IconComp, path }) => {
+        const isActive = activePage === id;
+        return (
+            <div
+                onClick={() => navigate(path)}
+                style={{
+                    ...s.item,
+                    backgroundColor: isActive ? "#EFF6FF" : "transparent",
+                    borderLeft: `2px solid ${isActive ? "#2563EB" : "transparent"}`,
+                }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.backgroundColor = "#F8FAFC"; }}
+                onMouseLeave={e => { if (!isActive) e.currentTarget.style.backgroundColor = "transparent"; }}
+            >
+                <span style={{ ...s.icon, color: isActive ? "#2563EB" : "#94A3B8" }}>
+                    <IconComp />
+                </span>
+                <span style={{ ...s.label, color: isActive ? "#1D4ED8" : "#475569", fontWeight: isActive ? "500" : "400" }}>
+                    {label}
+                </span>
+                {isActive && <div style={s.activeDot} />}
+            </div>
+        );
+    };
+
+    const isSettings = activePage === "settings";
 
     return (
-        <div style={styles.sidebar}>
+        <aside style={s.sidebar}>
 
-            {menuItems.map(item => (
+
+            {/* ── Main nav ── */}
+            <nav style={s.nav}>
+                {NAV_ITEMS.map(({ id, label, icon: IconComp, path }) => (
+                    <NavItem key={id} id={id} label={label} IconComp={IconComp} path={path} />
+                ))}
+            </nav>
+
+            {/* ── Bottom: Settings ── */}
+            <div style={s.bottom}>
+                <div style={s.bottomDivider} />
                 <div
-                    key={item.id}
-                    onClick={() => navigate(item.path)} // Navigation au clic
+                    onClick={() => navigate("/settings")}
                     style={{
-                        ...styles.menuItem,
-                        ...(activePage === item.id ? styles.activeItem : {})
+                        ...s.item,
+                        ...s.settingsItem,
+                        backgroundColor: isSettings ? "#EFF6FF" : "#F8FAFC",
+                        borderLeft: `2px solid ${isSettings ? "#2563EB" : "transparent"}`,
+                        borderColor: isSettings ? "#2563EB" : undefined,
                     }}
+                    onMouseEnter={e => { if (!isSettings) e.currentTarget.style.backgroundColor = "#F1F5F9"; }}
+                    onMouseLeave={e => { if (!isSettings) e.currentTarget.style.backgroundColor = "#F8FAFC"; }}
                 >
-                    <span style={{
-                        ...styles.icon,
-                        color: activePage === item.id ? "#185FA5" : "#888"
-                    }}>
-                        {item.icon}
+                    <span style={{ ...s.icon, color: isSettings ? "#2563EB" : "#94A3B8" }}>
+                        <SettingOutlined />
                     </span>
-                    <span style={{
-                        ...styles.label,
-                        color: activePage === item.id ? "#185FA5" : "#444",
-                        fontWeight: activePage === item.id ? "500" : "400"
-                    }}>
-                        {item.label}
-                    </span>
-                </div>
-            ))}
-
-            <div style={styles.bottom}>
-                <div 
-                    onClick={() => navigate('/settings')} // Navigation vers Settings
-                    style={{ 
-                        ...styles.menuItem, 
-                        ...styles.settingsItem,
-                        backgroundColor: activePage === 'settings' ? '#EBF3FB' : '#F3F4F6' // État actif visuel
-                    }}
-                >
-                    <SettingOutlined style={{
-                        ...styles.icon,
-                        color: activePage === 'settings' ? "#185FA5" : "#444"
-                    }} />
-                    <span style={{
-                        ...styles.label,
-                        color: activePage === 'settings' ? "#185FA5" : "#444"
-                    }}>
+                    <span style={{ ...s.label, color: isSettings ? "#1D4ED8" : "#475569", fontWeight: isSettings ? "500" : "400" }}>
                         Settings
                     </span>
                 </div>
             </div>
-            
-        </div>
+
+        </aside>
     );
 };
 
-const styles = {
+const s = {
     sidebar: {
-        width: "200px",
+        width: "210px", flexShrink: 0,
         backgroundColor: "white",
-        borderRight: "0.5px solid #E0E0E0",
-        padding: "16px 0",
-        flexShrink: 0,
-        height: "100%",
-        position: "relative"
+        borderRight: "1px solid #E2E8F0",
+        display: "flex", flexDirection: "column",
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        boxShadow: "1px 0 3px rgba(15,23,42,0.03)",
     },
-    menuItem: {
-        padding: "8px 16px",
-        display: "flex",
-        alignItems: "center",
-        gap: "10px",
-        cursor: "pointer",
-        borderLeft: "2px solid transparent"
+
+    sectionLabel: {
+        fontSize: "10.5px", fontWeight: "600",
+        textTransform: "uppercase", letterSpacing: "0.07em",
+        color: "#CBD5E1", padding: "20px 18px 8px",
     },
-    activeItem: {
-        backgroundColor: "#EBF3FB",
-        borderLeft: "2px solid #185FA5"
+
+    nav:   { display: "flex", flexDirection: "column", gap: "2px", padding: "0 8px" },
+
+    item: {
+        display: "flex", alignItems: "center", gap: "10px",
+        padding: "9px 12px", borderRadius: "8px",
+        cursor: "pointer", transition: "background-color 0.12s",
+        borderLeft: "2px solid transparent",
+        position: "relative",
     },
-    icon: {
-        fontSize: "16px"
+    icon:        { fontSize: "15px", display: "flex", alignItems: "center", flexShrink: 0 },
+    label:       { fontSize: "13px", flex: 1 },
+    activeDot: {
+        width: "5px", height: "5px", borderRadius: "50%",
+        backgroundColor: "#2563EB", flexShrink: 0,
     },
-    label: {
-        fontSize: "13px"
-    },
-    settingsItem: {
-        backgroundColor: "#F3F4F6",   
-        border: "1px solid #E5E7EB",
-        margin: "0 10px", // Petit ajustement pour ne pas coller aux bords si besoin
-        borderRadius: "4px"
-    },
-    bottom: {
-        position: "absolute",
-        bottom: "20px",
-        width: "100%",
-    }
+
+    /* settings */
+    bottom: { marginTop: "auto", padding: "0 8px 16px" },
+    bottomDivider: { height: "1px", backgroundColor: "#F1F5F9", margin: "12px 0" },
+    settingsItem:  { borderRadius: "8px" },
 };
 
 export default Sidebar;
