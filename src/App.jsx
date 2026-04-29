@@ -5,6 +5,8 @@ import MarketEventsSummaryPage from "./pages/MarketEventsSummaryPage";
 import SettingsPage from "./pages/SettingsPage";
 import SourcesPage from "./pages/SourcesPage";
 import DashboardPage from "./pages/DashboardPage";
+import MarketEventsAnalysesPage from "./pages/MarketEventsAnalysesPage";
+
 
 
 
@@ -18,6 +20,8 @@ function App() {
           <Route path="/summary" element={<MarketEventsSummaryPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/sources" element={<SourcesPage />} />
+          <Route path="/analyses" element={<MarketEventsAnalysesPage />} />
+
 
         </Routes>
       </div>

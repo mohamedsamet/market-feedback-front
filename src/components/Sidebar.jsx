@@ -4,15 +4,16 @@ import {
     ApiOutlined,
     SettingOutlined,
     BarChartOutlined,
+    BulbOutlined
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
 const NAV_ITEMS = [
     { id: "dashboard", label: "Dashboard",      icon: DashboardOutlined, path: "/dashboard" },
     { id: "events",    label: "Market Events",  icon: FileTextOutlined,  path: "/"          },
-    { id: "summary",   label: "Events Summary", icon: BarChartOutlined,  path: "/summary"   },
-    { id: "sources",   label: "Sources",        icon: ApiOutlined,       path: "/sources"   },
-];
+    { id: "summary",   label: "Events Summary", icon: BulbOutlined,  path: "/summary"   },
+    { id: "analyses", label: "Analyses", icon: BarChartOutlined , path: "/analyses" },
+    { id: "sources",   label: "Sources",        icon: ApiOutlined,       path: "/sources"   },];
 
 const Sidebar = ({ activePage }) => {
     const navigate = useNavigate();
