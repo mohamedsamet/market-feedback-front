@@ -11,13 +11,22 @@ const MarketEventsAnalysesPage = () => {
     const [search, setSearch]           = useState("");
     const [searchInput, setSearchInput] = useState("");
     const [sortUrgence, setSortUrgence] = useState("");
+    const [activeIndex, setActiveIndex] = useState(0);
 
     const loadData = () => {
         setLoading(true);
         getAllAnalyses({ search, sortUrgence })
             .then(data => {
-                setItems(Array.isArray(data) ? data : data.content || []);
+                const list = Array.isArray(data) ? data : data.content || [];
+                setItems(list);
                 setLoading(false);
+
+                const params = new URLSearchParams(window.location.search);
+                const targetId = params.get('id');
+                if (targetId) {
+                    const index = list.findIndex(item => item.id === targetId);
+                    if (index > -1) setActiveIndex(index);
+                }
             })
             .catch(err => {
                 console.error("Erreur carousel :", err);
@@ -84,7 +93,12 @@ const MarketEventsAnalysesPage = () => {
                     ) : items.length === 0 ? (
                         <p style={styles.empty}>Aucune analyse trouvée</p>
                     ) : (
-                        <Carousel data-bs-theme="dark" interval={null}>
+                        <Carousel
+                            data-bs-theme="dark"
+                            interval={null}
+                            activeIndex={activeIndex}
+                            onSelect={(index) => setActiveIndex(index)}
+                        >
                             {items.map((item, i) => (
                                 <Carousel.Item key={i}>
                                     <div style={styles.card}>
@@ -156,13 +170,7 @@ const styles = {
     count:           { fontSize: "12px", color: "#888", marginLeft: "auto" },
     loading:         { textAlign: "center", padding: "40px", color: "#888" },
     empty:           { textAlign: "center", padding: "40px", color: "#999", fontStyle: "italic" },
-    card: { 
-    backgroundColor: "white", border: "0.5px solid #E0E0E0", borderRadius: "16px", 
-    padding: "28px", boxShadow: "0 4px 16px rgba(0,0,0,0.06)", margin: "0 60px 40px",
-    height: "420px",           // ← hauteur fixe
-    display: "flex", flexDirection: "column",  // ← layout interne flex
-    overflow: "hidden"         // ← coupe ce qui dépasse
-},
+    card:            { backgroundColor: "white", border: "0.5px solid #E0E0E0", borderRadius: "16px", padding: "28px", boxShadow: "0 4px 16px rgba(0,0,0,0.06)", margin: "0 60px 40px", height: "420px", display: "flex", flexDirection: "column", overflow: "hidden" },
     cardHeader:      { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" },
     cardHeaderLeft:  { display: "flex", alignItems: "center", gap: "10px" },
     cardHeaderRight: { display: "flex", alignItems: "center", gap: "8px" },
@@ -171,10 +179,11 @@ const styles = {
     urgenceBadge:    { fontSize: "12px", fontWeight: "600", padding: "4px 10px", borderRadius: "6px" },
     categorie:       { fontSize: "12px", color: "#888", fontStyle: "italic" },
     metaRow:         { display: "flex", gap: "20px", marginBottom: "16px" },
-    meta:            { fontSize: "11px", color: "#AAA" },    
+    meta:            { fontSize: "11px", color: "#AAA" },
     position:        { textAlign: "center", fontSize: "12px", color: "#AAA", margin: "16px 0 0" },
-    bold: { fontWeight: "700", color: "#1A1A1A" },
-    text: { fontSize: "14px", color: "#333", lineHeight: "1.7", margin: "0 0 12px" },
+    bold:            { fontWeight: "700", color: "#1A1A1A" },
+    text:            { fontSize: "14px", color: "#333", lineHeight: "1.7", margin: "0 0 12px" },
+    divider:         { height: "1px", backgroundColor: "#F0F0F0", margin: "0 0 16px" },
 };
 
 export default MarketEventsAnalysesPage;
