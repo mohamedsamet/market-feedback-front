@@ -51,10 +51,7 @@ const Header = () => {
                     <div style={s.avatar}>
                         <UserOutlined style={{ fontSize: "13px", color: "white" }} />
                     </div>
-                    <div style={s.userText}>
-                        <span style={s.userName}>Nom Prénom</span>
-                        <span style={s.userRole}>Décideur</span>
-                    </div>
+                    
                 </div>
 
                 <div style={s.divider} />
