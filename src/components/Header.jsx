@@ -51,7 +51,11 @@ const Header = () => {
                     <div style={s.avatar}>
                         <UserOutlined style={{ fontSize: "13px", color: "white" }} />
                     </div>
+<<<<<<< Updated upstream
                     
+=======
+
+>>>>>>> Stashed changes
                 </div>
 
                 <div style={s.divider} />
@@ -77,11 +81,11 @@ const s = {
     },
 
     /* brand */
-    brand:      { display: "flex", alignItems: "center", gap: "12px" },
-    logo:       { width: "36px", height: "36px", objectFit: "contain", borderRadius: "8px" },
-    brandText:  { display: "flex", flexDirection: "column", gap: "1px" },
-    brandName:  { fontSize: "14px", fontWeight: "600", color: "#0F172A", letterSpacing: "-0.2px" },
-    brandSub:   { fontSize: "11px", color: "#94A3B8", fontWeight: "400" },
+    brand: { display: "flex", alignItems: "center", gap: "12px" },
+    logo: { width: "36px", height: "36px", objectFit: "contain", borderRadius: "8px" },
+    brandText: { display: "flex", flexDirection: "column", gap: "1px" },
+    brandName: { fontSize: "14px", fontWeight: "600", color: "#0F172A", letterSpacing: "-0.2px" },
+    brandSub: { fontSize: "11px", color: "#94A3B8", fontWeight: "400" },
 
     /* clock */
     clock: {
@@ -89,12 +93,12 @@ const s = {
         backgroundColor: "#F8FAFC", border: "1px solid #E2E8F0",
         borderRadius: "8px", padding: "6px 14px",
     },
-    date:       { fontSize: "12.5px", color: "#64748B" },
-    separator:  { fontSize: "12px", color: "#CBD5E1" },
-    time:       { fontSize: "12.5px", fontWeight: "600", color: "#2563EB", fontVariantNumeric: "tabular-nums" },
+    date: { fontSize: "12.5px", color: "#64748B" },
+    separator: { fontSize: "12px", color: "#CBD5E1" },
+    time: { fontSize: "12.5px", fontWeight: "600", color: "#2563EB", fontVariantNumeric: "tabular-nums" },
 
     /* user area */
-    userArea:   { display: "flex", alignItems: "center", gap: "4px" },
+    userArea: { display: "flex", alignItems: "center", gap: "4px" },
     userInfo: {
         display: "flex", alignItems: "center", gap: "10px",
         padding: "5px 10px 5px 6px", borderRadius: "10px",
@@ -107,11 +111,11 @@ const s = {
         display: "flex", alignItems: "center", justifyContent: "center",
         flexShrink: 0,
     },
-    userText:   { display: "flex", flexDirection: "column", gap: "1px" },
-    userName:   { fontSize: "13px", fontWeight: "500", color: "#1E293B", lineHeight: 1 },
-    userRole:   { fontSize: "11px", color: "#94A3B8", lineHeight: 1 },
+    userText: { display: "flex", flexDirection: "column", gap: "1px" },
+    userName: { fontSize: "13px", fontWeight: "500", color: "#1E293B", lineHeight: 1 },
+    userRole: { fontSize: "11px", color: "#94A3B8", lineHeight: 1 },
 
-    divider:    { width: "1px", height: "22px", backgroundColor: "#E2E8F0", margin: "0 6px" },
+    divider: { width: "1px", height: "22px", backgroundColor: "#E2E8F0", margin: "0 6px" },
 
     logoutBtn: {
         width: "34px", height: "34px", borderRadius: "8px",
