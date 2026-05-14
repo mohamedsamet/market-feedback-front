@@ -1,9 +1,8 @@
 const API_URL = "http://localhost:9060/api/carousel";
 
-export const getAllAnalyses = async ({ search = '', sortUrgence = '' } = {}) => {
+export const getAllAnalyses = async () => {
     try {
-        const params = new URLSearchParams({ search, sortUrgence });
-        const response = await fetch(`${API_URL}?${params}`);
+        const response = await fetch(API_URL);
         if (!response.ok) throw new Error(`Erreur serveur : ${response.status}`);
         return await response.json();
     } catch (error) {
