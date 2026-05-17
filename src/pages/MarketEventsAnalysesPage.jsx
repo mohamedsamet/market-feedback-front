@@ -9,9 +9,7 @@ const MarketEventsAnalysesPage = () => {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [searchInput, setSearchInput] = useState("");
-    const [searchField, setSearchField] = useState("all");
     const [sortUrgence, setSortUrgence] = useState("");
-    const [sortFamille, setSortFamille] = useState("");
     const [docIndex, setDocIndex] = useState(0);
     const [themeIndex, setThemeIndex] = useState(0);
     const [propIndex, setPropIndex] = useState(0);
@@ -36,7 +34,7 @@ const MarketEventsAnalysesPage = () => {
         setDocIndex(0);
         setThemeIndex(0);
         setPropIndex(0);
-    }, [search, sortUrgence, sortFamille, searchField]);
+    }, [search, sortUrgence]);
 
     useEffect(() => {
         if (documents.length === 0) return;
@@ -50,7 +48,6 @@ const MarketEventsAnalysesPage = () => {
 
     const handleSearch = () => setSearch(searchInput);
 
-    const familles = [...new Set(documents.map(doc => doc.famille).filter(Boolean))];
     const urgences = [...new Set(
         documents.flatMap(doc => doc.themes ?? [])
             .map(t => t.urgence)
@@ -66,33 +63,19 @@ const MarketEventsAnalysesPage = () => {
     };
 
     const filteredDocuments = documents.filter(doc => {
-        if (sortFamille && doc.famille !== sortFamille) return false;
-
-        if (search) {
-            const q = search.toLowerCase();
-            if (searchField === "famille") {
-                return doc.famille?.toLowerCase().includes(q);
-            }
-            if (searchField === "theme") {
-                return doc.themes?.some(t => t.theme?.toLowerCase().includes(q));
-            }
-            if (searchField === "contenu") {
-                return doc.themes?.some(t =>
-                    t.prediction?.toLowerCase().includes(q) ||
-                    getPropositions(t).some(p => p?.toLowerCase().includes(q))
-                );
-            }
-            // "all"
-            return (
-                doc.famille?.toLowerCase().includes(q) ||
-                doc.themes?.some(t =>
-                    t.theme?.toLowerCase().includes(q) ||
-                    t.prediction?.toLowerCase().includes(q) ||
-                    getPropositions(t).some(p => p?.toLowerCase().includes(q))
-                )
-            );
-        }
-        return true;
+        if (!search) return true;
+        const q = search.toLowerCase();
+        return (
+            doc.famille?.toLowerCase().includes(q) ||
+            doc.themes?.some(t =>
+                t.theme?.toLowerCase().includes(q) ||
+                t.prediction?.toLowerCase().includes(q) ||
+                t.categorie?.toLowerCase().includes(q) ||
+                t.ton?.toLowerCase().includes(q) ||
+                t.urgence?.toLowerCase().includes(q) ||
+                getPropositions(t).some(p => p?.toLowerCase().includes(q))
+            )
+        );
     });
 
     const safeDocIndex = Math.min(docIndex, Math.max(0, filteredDocuments.length - 1));
@@ -142,21 +125,9 @@ const MarketEventsAnalysesPage = () => {
 
                     {/* Toolbar */}
                     <div style={styles.toolbar}>
-
-                        <select
-                            value={searchField}
-                            onChange={e => setSearchField(e.target.value)}
-                            style={styles.select}
-                        >
-                            <option value="all">Tous les champs</option>
-                            <option value="famille">Famille</option>
-                            <option value="theme">Thème</option>
-                            <option value="contenu">Contenu</option>
-                        </select>
-
                         <input
                             type="text"
-                            placeholder="Rechercher..."
+                            placeholder="Rechercher dans tout le contenu..."
                             value={searchInput}
                             onChange={e => setSearchInput(e.target.value)}
                             onKeyDown={e => e.key === "Enter" && handleSearch()}
@@ -181,20 +152,9 @@ const MarketEventsAnalysesPage = () => {
                             onChange={e => setSortUrgence(e.target.value)}
                             style={styles.select}
                         >
-                            <option value="">Toutes les urgences</option>
+                            <option value="">Toutes urgences</option>
                             {urgences.map(u => (
                                 <option key={u} value={u}>{u}</option>
-                            ))}
-                        </select>
-
-                        <select
-                            value={sortFamille}
-                            onChange={e => setSortFamille(e.target.value)}
-                            style={styles.select}
-                        >
-                            <option value="">Toutes les familles</option>
-                            {familles.map(f => (
-                                <option key={f} value={f}>{f}</option>
                             ))}
                         </select>
 
@@ -426,64 +386,54 @@ const MarketEventsAnalysesPage = () => {
 };
 
 const styles = {
-    page: { height: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#F5F5F5", fontFamily: "Arial, sans-serif" },
-    body: { display: "flex", flex: 1, overflow: "hidden" },
-    main: { flex: 1, padding: "24px", overflowY: "auto" },
-    title: { fontSize: "18px", fontWeight: "bold", color: "#1A1A1A", margin: "0 0 20px" },
-
-    toolbar: { display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px", flexWrap: "wrap" },
-    search: { fontSize: "13px", padding: "8px 14px", border: "0.5px solid #E0E0E0", borderRadius: "6px", width: "260px", outline: "none", backgroundColor: "white", color: "#1A1A1A" },
-    searchBtn: { fontSize: "13px", padding: "8px 16px", backgroundColor: "#185FA5", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" },
-    clearBtn: { fontSize: "13px", padding: "8px 16px", backgroundColor: "#F5F5F5", color: "#555", border: "0.5px solid #E0E0E0", borderRadius: "6px", cursor: "pointer" },
-    select: { fontSize: "13px", padding: "8px 12px", border: "0.5px solid #E0E0E0", borderRadius: "6px", outline: "none", cursor: "pointer", backgroundColor: "white", color: "#1A1A1A", appearance: "auto", WebkitAppearance: "auto" },
-    count: { fontSize: "12px", color: "#888", marginLeft: "auto" },
-    empty: { textAlign: "center", padding: "40px", color: "#999", fontStyle: "italic" },
-
-    wrapper: { display: "flex", flexDirection: "column", gap: "16px", maxWidth: "860px", margin: "0 auto" },
-
-    card: { backgroundColor: "white", border: "0.5px solid #E0E0E0", borderRadius: "16px", padding: "28px", boxShadow: "0 4px 16px rgba(0,0,0,0.06)", display: "flex", flexDirection: "column", gap: "14px" },
-    themeCard: { backgroundColor: "#FAFBFF", border: "0.5px solid #E8EAF0", borderRadius: "12px", padding: "20px", display: "flex", flexDirection: "column", gap: "12px" },
-
-    docHeader: { display: "flex", justifyContent: "space-between", alignItems: "center" },
-    docHeaderLeft: { display: "flex", alignItems: "center", gap: "10px" },
+    page:           { height: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#F5F5F5", fontFamily: "Arial, sans-serif" },
+    body:           { display: "flex", flex: 1, overflow: "hidden" },
+    main:           { flex: 1, padding: "24px", overflowY: "auto" },
+    title:          { fontSize: "18px", fontWeight: "bold", color: "#1A1A1A", margin: "0 0 20px" },
+    toolbar:        { display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px", flexWrap: "wrap" },
+    search:         { fontSize: "13px", padding: "8px 14px", border: "0.5px solid #E0E0E0", borderRadius: "6px", width: "280px", outline: "none", backgroundColor: "white", color: "#1A1A1A" },
+    searchBtn:      { fontSize: "13px", padding: "8px 16px", backgroundColor: "#185FA5", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" },
+    clearBtn:       { fontSize: "13px", padding: "8px 16px", backgroundColor: "#F5F5F5", color: "#555", border: "0.5px solid #E0E0E0", borderRadius: "6px", cursor: "pointer" },
+    select:         { fontSize: "13px", padding: "8px 12px", border: "0.5px solid #E0E0E0", borderRadius: "6px", outline: "none", cursor: "pointer", backgroundColor: "white", color: "#1A1A1A", appearance: "auto", WebkitAppearance: "auto" },
+    count:          { fontSize: "12px", color: "#888", marginLeft: "auto" },
+    empty:          { textAlign: "center", padding: "40px", color: "#999", fontStyle: "italic" },
+    wrapper:        { display: "flex", flexDirection: "column", gap: "16px", maxWidth: "860px", margin: "0 auto" },
+    card:           { backgroundColor: "white", border: "0.5px solid #E0E0E0", borderRadius: "16px", padding: "28px", boxShadow: "0 4px 16px rgba(0,0,0,0.06)", display: "flex", flexDirection: "column", gap: "14px" },
+    themeCard:      { backgroundColor: "#FAFBFF", border: "0.5px solid #E8EAF0", borderRadius: "12px", padding: "20px", display: "flex", flexDirection: "column", gap: "12px" },
+    docHeader:      { display: "flex", justifyContent: "space-between", alignItems: "center" },
+    docHeaderLeft:  { display: "flex", alignItems: "center", gap: "10px" },
     docHeaderRight: { display: "flex", alignItems: "center", gap: "8px" },
-    famille: { fontSize: "17px", fontWeight: "700", color: "#1A1A1A" },
-    totalBadge: { fontSize: "11px", fontWeight: "600", padding: "3px 8px", borderRadius: "5px", backgroundColor: "#EEF3FF", color: "#185FA5" },
-    metaSmall: { fontSize: "11px", color: "#AAA" },
-
-    themeNav: { display: "flex", justifyContent: "space-between", alignItems: "center" },
-    sectionLabel: { fontSize: "12px", fontWeight: "600", color: "#888" },
-    themeDots: { display: "flex", gap: "6px", alignItems: "center" },
-    themeDot: { width: "9px", height: "9px", borderRadius: "50%", cursor: "pointer", transition: "background-color 0.2s" },
-
-    cardHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" },
+    famille:        { fontSize: "17px", fontWeight: "700", color: "#1A1A1A" },
+    totalBadge:     { fontSize: "11px", fontWeight: "600", padding: "3px 8px", borderRadius: "5px", backgroundColor: "#EEF3FF", color: "#185FA5" },
+    metaSmall:      { fontSize: "11px", color: "#AAA" },
+    themeNav:       { display: "flex", justifyContent: "space-between", alignItems: "center" },
+    sectionLabel:   { fontSize: "12px", fontWeight: "600", color: "#888" },
+    themeDots:      { display: "flex", gap: "6px", alignItems: "center" },
+    themeDot:       { width: "9px", height: "9px", borderRadius: "50%", cursor: "pointer", transition: "background-color 0.2s" },
+    cardHeader:     { display: "flex", justifyContent: "space-between", alignItems: "flex-start" },
     cardHeaderLeft: { display: "flex", alignItems: "center", gap: "10px" },
-    cardHeaderRight: { display: "flex", alignItems: "center", gap: "8px" },
-    theme: { fontSize: "15px", fontWeight: "700", color: "#1A1A1A" },
-    urgenceBadge: { fontSize: "12px", fontWeight: "600", padding: "4px 10px", borderRadius: "6px" },
-    categorie: { fontSize: "12px", color: "#888", fontStyle: "italic" },
-    metaRow: { display: "flex", gap: "20px", flexWrap: "wrap" },
-    meta: { fontSize: "11px", color: "#AAA" },
-    divider: { height: "1px", backgroundColor: "#F0F0F0" },
-
-    predictionLabel: { fontSize: "12px", fontWeight: "600", color: "#888", margin: 0 },
-    prediction: { fontSize: "14px", fontWeight: "700", color: "#1A1A1A", lineHeight: "1.65", margin: 0 },
-
-    propSection: { display: "flex", flexDirection: "column", gap: "10px" },
-    propHeader: { display: "flex", justifyContent: "space-between", alignItems: "center" },
-    propLabel: { fontSize: "12px", fontWeight: "600", color: "#888" },
-    propCount: { fontSize: "12px", color: "#AAA" },
-    propCard: { backgroundColor: "#F8F9FC", border: "0.5px solid #E8EAF0", borderRadius: "10px", padding: "14px 16px", minHeight: "80px" },
-    propText: { fontSize: "14px", color: "#333", lineHeight: "1.7", margin: 0 },
-
-    stepper: { display: "flex", alignItems: "center", justifyContent: "center", gap: "10px" },
-    stepBtn: { background: "none", border: "0.5px solid #D0D0D0", borderRadius: "6px", padding: "2px 12px", fontSize: "20px", lineHeight: "1.4", color: "#555", cursor: "pointer" },
-    dots: { display: "flex", gap: "6px", alignItems: "center" },
-    dot: { width: "7px", height: "7px", borderRadius: "50%", transition: "background-color 0.2s" },
-
-    nav: { display: "flex", justifyContent: "space-between", alignItems: "center" },
-    navBtn: { fontSize: "13px", padding: "8px 18px", backgroundColor: "white", color: "#1A1A1A", border: "0.5px solid #E0E0E0", borderRadius: "8px", cursor: "pointer" },
-    navCount: { fontSize: "12px", color: "#AAA" },
+    cardHeaderRight:{ display: "flex", alignItems: "center", gap: "8px" },
+    theme:          { fontSize: "15px", fontWeight: "700", color: "#1A1A1A" },
+    urgenceBadge:   { fontSize: "12px", fontWeight: "600", padding: "4px 10px", borderRadius: "6px" },
+    categorie:      { fontSize: "12px", color: "#888", fontStyle: "italic" },
+    metaRow:        { display: "flex", gap: "20px", flexWrap: "wrap" },
+    meta:           { fontSize: "11px", color: "#AAA" },
+    divider:        { height: "1px", backgroundColor: "#F0F0F0" },
+    predictionLabel:{ fontSize: "12px", fontWeight: "600", color: "#888", margin: 0 },
+    prediction:     { fontSize: "14px", fontWeight: "700", color: "#1A1A1A", lineHeight: "1.65", margin: 0 },
+    propSection:    { display: "flex", flexDirection: "column", gap: "10px" },
+    propHeader:     { display: "flex", justifyContent: "space-between", alignItems: "center" },
+    propLabel:      { fontSize: "12px", fontWeight: "600", color: "#888" },
+    propCount:      { fontSize: "12px", color: "#AAA" },
+    propCard:       { backgroundColor: "#F8F9FC", border: "0.5px solid #E8EAF0", borderRadius: "10px", padding: "14px 16px", minHeight: "80px" },
+    propText:       { fontSize: "14px", color: "#333", lineHeight: "1.7", margin: 0 },
+    stepper:        { display: "flex", alignItems: "center", justifyContent: "center", gap: "10px" },
+    stepBtn:        { background: "none", border: "0.5px solid #D0D0D0", borderRadius: "6px", padding: "2px 12px", fontSize: "20px", lineHeight: "1.4", color: "#555", cursor: "pointer" },
+    dots:           { display: "flex", gap: "6px", alignItems: "center" },
+    dot:            { width: "7px", height: "7px", borderRadius: "50%", transition: "background-color 0.2s" },
+    nav:            { display: "flex", justifyContent: "space-between", alignItems: "center" },
+    navBtn:         { fontSize: "13px", padding: "8px 18px", backgroundColor: "white", color: "#1A1A1A", border: "0.5px solid #E0E0E0", borderRadius: "8px", cursor: "pointer" },
+    navCount:       { fontSize: "12px", color: "#AAA" },
 };
 
 export default MarketEventsAnalysesPage;

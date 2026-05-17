@@ -10,7 +10,6 @@ const MarketEventSummaryModal = ({ event, onClose }) => {
 
     const fmtDate = (d) => d ? new Date(d).toLocaleString("fr-FR") : "N/A";
 
-    /* deterministic theme badge color */
     const PALETTES = [
         { bg: "#EFF6FF", color: "#1D4ED8", border: "#DBEAFE" },
         { bg: "#F0FDF4", color: "#15803D", border: "#BBF7D0" },
@@ -19,9 +18,14 @@ const MarketEventSummaryModal = ({ event, onClose }) => {
         { bg: "#FFF1F2", color: "#BE123C", border: "#FECDD3" },
         { bg: "#F0F9FF", color: "#0369A1", border: "#BAE6FD" },
     ];
-    const palette = PALETTES[Math.abs(
-        [...(event.theme || "")].reduce((acc, c) => acc + c.charCodeAt(0), 0)
+
+    const paletteFor = (theme = "") => PALETTES[Math.abs(
+        [...theme].reduce((acc, c) => acc + c.charCodeAt(0), 0)
     ) % PALETTES.length];
+
+    const themes       = event.themes ?? [];
+    const firstTheme   = themes[0]?.theme ?? "";
+    const firstPalette = paletteFor(firstTheme);
 
     return (
         <div style={s.overlay} onClick={onClose}>
@@ -51,43 +55,67 @@ const MarketEventSummaryModal = ({ event, onClose }) => {
                 {/* ── Meta row ── */}
                 <div style={s.metaRow}>
                     <div style={s.metaItem}>
-                        <span style={s.metaLabel}>Thème</span>
-                        {event.theme
-                            ? <span style={{ ...s.themeBadge, backgroundColor: palette.bg, color: palette.color, borderColor: palette.border }}>
-                                {event.theme}
+                        <span style={s.metaLabel}>Thème principal</span>
+                        {firstTheme
+                            ? <span style={{ ...s.themeBadge, backgroundColor: firstPalette.bg, color: firstPalette.color, borderColor: firstPalette.border }}>
+                                {firstTheme}
                               </span>
                             : <span style={s.naText}>—</span>}
                     </div>
                     <div style={s.metaDivider} />
                     <div style={s.metaItem}>
                         <span style={s.metaLabel}>Généré le</span>
-                        <span style={s.metaValue}>{fmtDate(event.genereLe)}</span>
+                        <span style={s.metaValue}>{fmtDate(event.genereLe)}</span> {/* ✅ camelCase */}
                     </div>
                 </div>
 
-                {/* ── FR Content ── */}
-                <div style={s.section}>
-                    <div style={s.sectionHeader}>
-                        <span style={s.langFlag}>🇫🇷</span>
-                        <p style={s.sectionLabel}>Résumé en Français</p>
+                {/* ── Tous les thèmes ── */}
+                {themes.length === 0 ? (
+                    <div style={s.section}>
+                        <div style={s.contentBox}>
+                            <span style={s.naText}>Aucun contenu disponible.</span>
+                        </div>
                     </div>
-                    <div style={s.contentBox}>
-                        {event.contenuFr ?? <span style={s.naText}>Aucun contenu disponible.</span>}
-                    </div>
-                </div>
+                ) : themes.map((t, i) => {
+                    const palette = paletteFor(t.theme ?? "");
+                    return (
+                        <div key={i}>
+                            {themes.length > 1 && (
+                                <div style={{ ...s.section, marginBottom: "10px", marginTop: i === 0 ? 0 : "24px" }}>
+                                    <span style={{ ...s.themeBadge, backgroundColor: palette.bg, color: palette.color, borderColor: palette.border }}>
+                                        {t.theme}
+                                    </span>
+                                </div>
+                            )}
 
-                {/* ── EN Content ── */}
-                <div style={{ ...s.section, marginTop: "16px" }}>
-                    <div style={s.sectionHeader}>
-                        <span style={s.langFlag}>🇬🇧</span>
-                        <p style={s.sectionLabel}>Résumé en Anglais</p>
-                    </div>
-                    <div style={s.contentBox}>
-                        {cleanEnContent(event.contenuEn) !== "N/A"
-                            ? cleanEnContent(event.contenuEn)
-                            : <span style={s.naText}>Aucun contenu disponible.</span>}
-                    </div>
-                </div>
+                                 {/* FR */}
+                                <div style={s.section}>
+                                    <div style={s.sectionHeader}>
+                                        <span style={s.langFlag}>🇫🇷</span>
+                                        <p style={s.sectionLabel}>Résumé en Français</p>
+                                    </div>
+                                    <div style={s.contentBox}>
+                                        {t.contenuFr
+                                            ? t.contenuFr
+                                            : <span style={s.naText}>Aucun contenu disponible.</span>}
+                                    </div>
+                                </div>
+
+                                {/* EN */}
+                                <div style={{ ...s.section, marginTop: "16px" }}>
+                                    <div style={s.sectionHeader}>
+                                        <span style={s.langFlag}>🇬🇧</span>
+                                        <p style={s.sectionLabel}>Résumé en Anglais</p>
+                                    </div>
+                                    <div style={s.contentBox}>
+                                        {cleanEnContent(t.contenuEn) !== "N/A"
+                                            ? cleanEnContent(t.contenuEn)
+                                            : <span style={s.naText}>Aucun contenu disponible.</span>}
+                                    </div>
+                                </div>
+                        </div>
+                    );
+                })}
 
                 {/* ── Footer ── */}
                 <div style={s.footer}>
@@ -113,8 +141,6 @@ const s = {
         boxShadow: "0 20px 60px rgba(15,23,42,0.18)",
         border: "1px solid #E2E8F0",
     },
-
-    /* header */
     header: {
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "22px 28px 18px", borderBottom: "1px solid #F1F5F9",
@@ -126,15 +152,13 @@ const s = {
         backgroundColor: "#EFF6FF", border: "1px solid #DBEAFE",
         display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
     },
-    title:       { fontSize: "15px", fontWeight: "600", color: "#0F172A", margin: 0 },
-    subtitle:    { fontSize: "12px", color: "#94A3B8", margin: "2px 0 0", fontWeight: "400" },
+    title:        { fontSize: "15px", fontWeight: "600", color: "#0F172A", margin: 0 },
+    subtitle:     { fontSize: "12px", color: "#94A3B8", margin: "2px 0 0", fontWeight: "400" },
     closeIconBtn: {
         background: "none", border: "1px solid #E2E8F0", borderRadius: "8px",
         padding: "6px", cursor: "pointer", display: "flex",
         alignItems: "center", justifyContent: "center", flexShrink: 0,
     },
-
-    /* meta row */
     metaRow: {
         display: "flex", alignItems: "stretch",
         margin: "20px 28px", backgroundColor: "#F8FAFC",
@@ -149,9 +173,7 @@ const s = {
         fontSize: "12px", fontWeight: "500", border: "1px solid",
         alignSelf: "flex-start",
     },
-    naText:      { fontSize: "13px", color: "#CBD5E1" },
-
-    /* sections */
+    naText:        { fontSize: "13px", color: "#CBD5E1" },
     section:       { padding: "0 28px" },
     sectionHeader: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" },
     langFlag:      { fontSize: "16px", lineHeight: 1 },
@@ -162,8 +184,6 @@ const s = {
         fontSize: "13.5px", lineHeight: "1.8", color: "#334155",
         whiteSpace: "pre-wrap", wordBreak: "break-word",
     },
-
-    /* footer */
     footer: {
         display: "flex", justifyContent: "flex-end",
         padding: "18px 28px", borderTop: "1px solid #F1F5F9", marginTop: "20px",
