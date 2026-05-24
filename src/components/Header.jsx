@@ -56,9 +56,7 @@ const Header = () => {
 
                 <div style={s.divider} />
 
-                <button style={s.logoutBtn} onClick={logout} title="Se déconnecter">
-                    <LogoutOutlined style={{ fontSize: "14px", color: "#64748B" }} />
-                </button>
+                
             </div>
 
         </header>

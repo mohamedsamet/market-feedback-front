@@ -12,9 +12,10 @@ export const getAllMarketEventsSummary = async ({ search = '', page = 0, size = 
     }
 };
 
-export const fetchSummaryStats = async () => {
+export const fetchSummaryStats = async (search = "") => {
     try {
-        const response = await fetch(`${API_URL}/stats`);
+        const params = search ? `?search=${encodeURIComponent(search)}` : "";
+        const response = await fetch(`${API_URL}/stats${params}`);
         if (!response.ok) throw new Error(`Erreur serveur : ${response.status}`);
         return await response.json();
     } catch (error) {

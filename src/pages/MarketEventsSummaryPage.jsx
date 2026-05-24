@@ -30,17 +30,26 @@ const MarketEventsSummaryPage = () => {
     const [size]                            = useState(10);
     const [totalPages,    setTotalPages]    = useState(0);
     const [totalElements, setTotalElements] = useState(0);
+    const [totalThemes,   setTotalThemes]   = useState(0); // ✅ nouveau state pour le vrai total des thèmes
     const [todayCount,    setTodayCount]    = useState(0);
     const [sourcesCount,  setSourcesCount]  = useState(0);
     const [selectedIds,   setSelectedIds]   = useState(new Set());
     const [confirmModal,  setConfirmModal]  = useState(null);
     const [hoveredRow,    setHoveredRow]    = useState(null);
 
+    const loadStats = (currentSearch = "") => {
+    fetchSummaryStats(currentSearch)
+        .then(data => {
+            setTotalThemes(data.totalEvents);
+            setTodayCount(data.todayCount);
+            setSourcesCount(data.sourcesCount);
+        })
+        .catch(err => console.error("Erreur stats :", err));
+};
+
     useEffect(() => {
-        fetchSummaryStats()
-            .then(data => { setTodayCount(data.today); setSourcesCount(data.sources); })
-            .catch(err  => console.error("Erreur stats :", err));
-    }, []);
+    loadStats(search);
+}, [search]);
 
     const loadEvents = () => {
         setLoading(true);
@@ -48,7 +57,7 @@ const MarketEventsSummaryPage = () => {
             .then(data => {
                 setEvents(data.content);
                 setTotalPages(data.totalPages);
-                setTotalElements(data.totalElements);
+                setTotalElements(data.totalElements); // nb de documents (familles)
                 setLoading(false);
             })
             .catch(error => { console.error("Erreur chargement :", error); setLoading(false); });
@@ -74,19 +83,19 @@ const MarketEventsSummaryPage = () => {
     const confirmDeleteMany = ()   => setConfirmModal({ type: "many" });
 
     const handleConfirm = async () => {
-        try {
-            if (confirmModal.type === "one") {
-                await deleteMarketEventSummary(confirmModal.id);
-                setSelectedIds(prev => { const n = new Set(prev); n.delete(confirmModal.id); return n; });
-            } else {
-                await deleteMarketEventsSummary([...selectedIds]);
-                setSelectedIds(new Set());
-            }
-            setConfirmModal(null);
-            loadEvents();
-            fetchSummaryStats().then(data => { setTodayCount(data.today); setSourcesCount(data.sources); });
-        } catch (err) { console.error("Erreur suppression :", err); }
-    };
+    try {
+        if (confirmModal.type === "one") {
+            await deleteMarketEventSummary(confirmModal.id);
+            setSelectedIds(prev => { const n = new Set(prev); n.delete(confirmModal.id); return n; });
+        } else {
+            await deleteMarketEventsSummary([...selectedIds]);
+            setSelectedIds(new Set());
+        }
+        setConfirmModal(null);
+        loadEvents();
+        loadStats(search); // ✅ search courant
+    } catch (err) { console.error("Erreur suppression :", err); }
+};
 
     const allChecked  = events.length > 0 && selectedIds.size === events.length;
     const someChecked = selectedIds.size > 0;
@@ -105,8 +114,9 @@ const MarketEventsSummaryPage = () => {
                         </div>
                     </div>
 
+                    {/* ✅ totalThemes pour "Total collecté", todayCount et sourcesCount corrects */}
                     <StatsCards
-                        totalEvents={totalElements}
+                        totalEvents={totalThemes}
                         todayCount={todayCount}
                         sourcesCount={sourcesCount}
                     />
@@ -135,7 +145,7 @@ const MarketEventsSummaryPage = () => {
                                         Supprimer ({selectedIds.size})
                                     </button>
                                 )}
-                                <span style={s.countBadge}>{totalElements} résumés</span>
+                                <span style={s.countBadge}>{totalElements} familles · {totalThemes} thèmes</span>
                             </div>
                         </div>
 
@@ -170,57 +180,63 @@ const MarketEventsSummaryPage = () => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {events.map((event) => {
-                                                const isSelected = selectedIds.has(event.id);
-                                                const isHovered  = hoveredRow === event.id;
-                                                const theme   = event.themes?.[0]?.theme ?? "";
-                                                const contenu = event.themes?.[0]?.contenuFr ?? "";
-                                                const palette = themeColor(theme);
-                                                const rowBg   = isSelected ? "#EFF6FF" : isHovered ? "#F8FAFC" : "white";
+                                            {events.flatMap((event) =>
+                                                (event.themes ?? []).map((theme, tIdx) => {
+                                                    const rowKey     = `${event.id}-${tIdx}`;
+                                                    const isSelected = selectedIds.has(rowKey);
+                                                    const isHovered  = hoveredRow === rowKey;
+                                                    const palette    = themeColor(theme.theme ?? "");
+                                                    const rowBg      = isSelected ? "#EFF6FF" : isHovered ? "#F8FAFC" : "white";
 
-                                                return (
-                                                    <tr
-                                                        key={event.id}
-                                                        style={{ ...s.row, backgroundColor: rowBg }}
-                                                        onMouseEnter={() => setHoveredRow(event.id)}
-                                                        onMouseLeave={() => setHoveredRow(null)}
-                                                    >
-                                                        <td style={{ ...s.td, textAlign: "center", width: 44 }} onClick={e => e.stopPropagation()}>
-                                                            <input type="checkbox" checked={isSelected} onChange={() => toggleOne(event.id)} style={s.checkbox} />
-                                                        </td>
-                                                        <td style={{ ...s.td, ...s.tdId }} onClick={() => setSelectedEvent(event)}>
-                                                            #{event.id}
-                                                        </td>
-                                                        <td style={{ ...s.td, textAlign: "left" }} onClick={() => setSelectedEvent(event)}>
-                                                            {theme
-                                                                ? <span style={{ ...s.themeBadge, backgroundColor: palette.bg, color: palette.color, borderColor: palette.border }}>
-                                                                    {theme.substring(0, 48)}
-                                                                  </span>
-                                                                : <span style={s.naText}>—</span>}
-                                                        </td>
-                                                        <td style={{ ...s.td, textAlign: "left" }} onClick={() => setSelectedEvent(event)}>
-                                                            {event.famille
-                                                                ? <span style={s.famillebadge}>{event.famille}</span>
-                                                                : <span style={s.naText}>—</span>}
-                                                        </td>
-                                                        <td style={{ ...s.td, ...s.tdDate }} onClick={() => setSelectedEvent(event)}>
-                                                            {fmtDate(event.genereLe)}
-                                                        </td>
-                                                        <td style={{ ...s.td, ...s.tdSummary }} onClick={() => setSelectedEvent(event)}>
-                                                            {contenu.substring(0, 110)}
-                                                        </td>
-                                                        <td style={{ ...s.td, textAlign: "center" }} onClick={e => e.stopPropagation()}>
-                                                            <button
-                                                                onClick={() => confirmDeleteOne(event.id)}
-                                                                style={{ ...s.deleteRowBtn, opacity: isHovered ? 1 : 0 }}
-                                                                title="Supprimer"
-                                                            >
-                                                                <DeleteOutlined style={{ fontSize: "13px", color: "#A32D2D" }} />
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
+                                                    return (
+                                                        <tr
+                                                            key={rowKey}
+                                                            style={{ ...s.row, backgroundColor: rowBg }}
+                                                            onMouseEnter={() => setHoveredRow(rowKey)}
+                                                            onMouseLeave={() => setHoveredRow(null)}
+                                                        >
+                                                            <td style={{ ...s.td, textAlign: "center", width: 44 }} onClick={e => e.stopPropagation()}>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isSelected}
+                                                                    onChange={() => toggleOne(rowKey)}
+                                                                    style={s.checkbox}
+                                                                />
+                                                            </td>
+                                                            <td style={{ ...s.td, ...s.tdId }} onClick={() => setSelectedEvent({ ...event, _activeTheme: theme })}>
+                                                                #{typeof event.id === "string" ? event.id.substring(0, 7) : event.id}…
+                                                            </td>
+                                                            <td style={{ ...s.td, textAlign: "left" }} onClick={() => setSelectedEvent({ ...event, _activeTheme: theme })}>
+                                                                {theme.theme
+                                                                    ? <span style={{ ...s.themeBadge, backgroundColor: palette.bg, color: palette.color, borderColor: palette.border }}>
+                                                                        {theme.theme.substring(0, 48)}
+                                                                      </span>
+                                                                    : <span style={s.naText}>—</span>}
+                                                            </td>
+                                                            <td style={{ ...s.td, textAlign: "left" }} onClick={() => setSelectedEvent({ ...event, _activeTheme: theme })}>
+                                                                {event.famille
+                                                                    ? <span style={s.famillebadge}>{event.famille}</span>
+                                                                    : <span style={s.naText}>—</span>}
+                                                            </td>
+                                                            <td style={{ ...s.td, ...s.tdDate }} onClick={() => setSelectedEvent({ ...event, _activeTheme: theme })}>
+                                                                {fmtDate(event.genereLe)}
+                                                            </td>
+                                                            <td style={{ ...s.td, ...s.tdSummary }} onClick={() => setSelectedEvent({ ...event, _activeTheme: theme })}>
+                                                                {(theme.contenuFr ?? theme.contenu_fr ?? "").substring(0, 110)}
+                                                            </td>
+                                                            <td style={{ ...s.td, textAlign: "center" }} onClick={e => e.stopPropagation()}>
+                                                                <button
+                                                                    onClick={() => confirmDeleteOne(event.id)}
+                                                                    style={{ ...s.deleteRowBtn, opacity: isHovered ? 1 : 0 }}
+                                                                    title="Supprimer"
+                                                                >
+                                                                    <DeleteOutlined style={{ fontSize: "13px", color: "#A32D2D" }} />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })
+                                            )}
                                         </tbody>
                                     </table>
                                 </div>
