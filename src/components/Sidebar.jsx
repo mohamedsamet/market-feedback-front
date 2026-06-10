@@ -9,7 +9,6 @@ import {
 import { useNavigate } from "react-router-dom";
 
 const NAV_ITEMS = [
-    { id: "dashboard", label: "Dashboard",      icon: DashboardOutlined, path: "/dashboard" },
     { id: "events",    label: "Market Events",  icon: FileTextOutlined,  path: "/"          },
     { id: "summary",   label: "Events Summary", icon: BulbOutlined,  path: "/summary"   },
     { id: "analyses", label: "Analyses", icon: BarChartOutlined , path: "/analyses" },

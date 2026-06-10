@@ -51,17 +51,12 @@ const Header = () => {
                     <div style={s.avatar}>
                         <UserOutlined style={{ fontSize: "13px", color: "white" }} />
                     </div>
-                    <div style={s.userText}>
-                        <span style={s.userName}>Nom Prénom</span>
-                        <span style={s.userRole}>Décideur</span>
-                    </div>
+                    
                 </div>
 
                 <div style={s.divider} />
 
-                <button style={s.logoutBtn} onClick={logout} title="Se déconnecter">
-                    <LogoutOutlined style={{ fontSize: "14px", color: "#64748B" }} />
-                </button>
+                
             </div>
 
         </header>

@@ -1,7 +1,7 @@
 const StatsCards = ({ totalEvents = 0, todayCount = 0, sourcesCount = 0 }) => {
 
     const cards = [
-        { label: "Total collecté",  value: totalEvents,  color: "#4F46E5" },
+        { label: "Total",  value: totalEvents,  color: "#4F46E5" },
         { label: "Aujourd'hui",     value: todayCount,   color: "#4F46E5" },
         { label: "Sources actives", value: sourcesCount, color: "#4F46E5" }
     ];

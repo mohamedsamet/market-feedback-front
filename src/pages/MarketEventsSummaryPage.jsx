@@ -16,6 +16,7 @@ const THEME_PALETTES = [
     { bg: "#FFF1F2", color: "#BE123C", border: "#FECDD3" },
     { bg: "#F0F9FF", color: "#0369A1", border: "#BAE6FD" },
 ];
+
 const themeColor = (theme = "") => THEME_PALETTES[Math.abs(
     [...theme].reduce((acc, c) => acc + c.charCodeAt(0), 0)
 ) % THEME_PALETTES.length];
@@ -29,17 +30,26 @@ const MarketEventsSummaryPage = () => {
     const [size]                            = useState(10);
     const [totalPages,    setTotalPages]    = useState(0);
     const [totalElements, setTotalElements] = useState(0);
+    const [totalThemes,   setTotalThemes]   = useState(0); // ✅ nouveau state pour le vrai total des thèmes
     const [todayCount,    setTodayCount]    = useState(0);
     const [sourcesCount,  setSourcesCount]  = useState(0);
     const [selectedIds,   setSelectedIds]   = useState(new Set());
     const [confirmModal,  setConfirmModal]  = useState(null);
     const [hoveredRow,    setHoveredRow]    = useState(null);
 
+    const loadStats = (currentSearch = "") => {
+    fetchSummaryStats(currentSearch)
+        .then(data => {
+            setTotalThemes(data.totalEvents);
+            setTodayCount(data.todayCount);
+            setSourcesCount(data.sourcesCount);
+        })
+        .catch(err => console.error("Erreur stats :", err));
+};
+
     useEffect(() => {
-        fetchSummaryStats()
-            .then(data => { setTodayCount(data.today); setSourcesCount(data.sources); })
-            .catch(err  => console.error("Erreur stats :", err));
-    }, []);
+    loadStats(search);
+}, [search]);
 
     const loadEvents = () => {
         setLoading(true);
@@ -47,7 +57,7 @@ const MarketEventsSummaryPage = () => {
             .then(data => {
                 setEvents(data.content);
                 setTotalPages(data.totalPages);
-                setTotalElements(data.totalElements);
+                setTotalElements(data.totalElements); // nb de documents (familles)
                 setLoading(false);
             })
             .catch(error => { console.error("Erreur chargement :", error); setLoading(false); });
@@ -73,19 +83,19 @@ const MarketEventsSummaryPage = () => {
     const confirmDeleteMany = ()   => setConfirmModal({ type: "many" });
 
     const handleConfirm = async () => {
-        try {
-            if (confirmModal.type === "one") {
-                await deleteMarketEventSummary(confirmModal.id);
-                setSelectedIds(prev => { const n = new Set(prev); n.delete(confirmModal.id); return n; });
-            } else {
-                await deleteMarketEventsSummary([...selectedIds]);
-                setSelectedIds(new Set());
-            }
-            setConfirmModal(null);
-            loadEvents();
-            fetchSummaryStats().then(data => { setTodayCount(data.today); setSourcesCount(data.sources); });
-        } catch (err) { console.error("Erreur suppression :", err); }
-    };
+    try {
+        if (confirmModal.type === "one") {
+            await deleteMarketEventSummary(confirmModal.id);
+            setSelectedIds(prev => { const n = new Set(prev); n.delete(confirmModal.id); return n; });
+        } else {
+            await deleteMarketEventsSummary([...selectedIds]);
+            setSelectedIds(new Set());
+        }
+        setConfirmModal(null);
+        loadEvents();
+        loadStats(search); // ✅ search courant
+    } catch (err) { console.error("Erreur suppression :", err); }
+};
 
     const allChecked  = events.length > 0 && selectedIds.size === events.length;
     const someChecked = selectedIds.size > 0;
@@ -104,14 +114,14 @@ const MarketEventsSummaryPage = () => {
                         </div>
                     </div>
 
+                    {/* ✅ totalThemes pour "Total collecté", todayCount et sourcesCount corrects */}
                     <StatsCards
-                        totalEvents={totalElements}
+                        totalEvents={totalThemes}
                         todayCount={todayCount}
                         sourcesCount={sourcesCount}
                     />
 
                     <div style={s.card}>
-                        {/* toolbar */}
                         <div style={s.toolbar}>
                             <div style={s.toolbarLeft}>
                                 <div style={s.searchWrap}>
@@ -128,7 +138,6 @@ const MarketEventsSummaryPage = () => {
                                     />
                                 </div>
                             </div>
-
                             <div style={s.toolbarRight}>
                                 {someChecked && (
                                     <button onClick={confirmDeleteMany} style={s.deleteBulkBtn}>
@@ -136,11 +145,10 @@ const MarketEventsSummaryPage = () => {
                                         Supprimer ({selectedIds.size})
                                     </button>
                                 )}
-                                <span style={s.countBadge}>{totalElements} résumés</span>
+                                <span style={s.countBadge}>{totalElements} familles · {totalThemes} thèmes</span>
                             </div>
                         </div>
 
-                        {/* content */}
                         {loading ? (
                             <div style={s.loadingWrap}>
                                 <div style={s.spinner} />
@@ -165,61 +173,74 @@ const MarketEventsSummaryPage = () => {
                                                 </th>
                                                 <th style={{ ...s.th, width: 80 }}>ID</th>
                                                 <th style={{ ...s.th, width: 190, textAlign: "left" }}>Thème</th>
+                                                <th style={{ ...s.th, width: 120, textAlign: "left" }}>Famille</th>
                                                 <th style={{ ...s.th, width: 110 }}>Date</th>
                                                 <th style={{ ...s.th, textAlign: "left" }}>Résumé</th>
                                                 <th style={{ ...s.th, width: 52 }}></th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {events.map((event) => {
-                                                const isSelected = selectedIds.has(event.id);
-                                                const isHovered  = hoveredRow === event.id;
-                                                const palette    = themeColor(event.theme);
-                                                const rowBg = isSelected ? "#EFF6FF" : isHovered ? "#F8FAFC" : "white";
+                                            {events.flatMap((event) =>
+                                                (event.themes ?? []).map((theme, tIdx) => {
+                                                    const rowKey     = `${event.id}-${tIdx}`;
+                                                    const isSelected = selectedIds.has(rowKey);
+                                                    const isHovered  = hoveredRow === rowKey;
+                                                    const palette    = themeColor(theme.theme ?? "");
+                                                    const rowBg      = isSelected ? "#EFF6FF" : isHovered ? "#F8FAFC" : "white";
 
-                                                return (
-                                                    <tr
-                                                        key={event.id}
-                                                        style={{ ...s.row, backgroundColor: rowBg }}
-                                                        onMouseEnter={() => setHoveredRow(event.id)}
-                                                        onMouseLeave={() => setHoveredRow(null)}
-                                                    >
-                                                        <td style={{ ...s.td, textAlign: "center", width: 44 }} onClick={e => e.stopPropagation()}>
-                                                            <input type="checkbox" checked={isSelected} onChange={() => toggleOne(event.id)} style={s.checkbox} />
-                                                        </td>
-                                                        <td style={{ ...s.td, ...s.tdId }} onClick={() => setSelectedEvent(event)}>
-                                                            #{event.id}
-                                                        </td>
-                                                        <td style={{ ...s.td, textAlign: "left" }} onClick={() => setSelectedEvent(event)}>
-                                                            {event.theme
-                                                                ? <span style={{ ...s.themeBadge, backgroundColor: palette.bg, color: palette.color, borderColor: palette.border }}>
-                                                                    {event.theme.substring(0, 48)}
-                                                                  </span>
-                                                                : <span style={s.naText}>—</span>}
-                                                        </td>
-                                                        <td style={{ ...s.td, ...s.tdDate }} onClick={() => setSelectedEvent(event)}>
-                                                            {fmtDate(event.genereLe)}
-                                                        </td>
-                                                        <td style={{ ...s.td, ...s.tdSummary }} onClick={() => setSelectedEvent(event)}>
-                                                            {event.contenuFr?.substring(0, 110)}
-                                                        </td>
-                                                        <td style={{ ...s.td, textAlign: "center" }} onClick={e => e.stopPropagation()}>
-                                                            <button
-                                                                onClick={() => confirmDeleteOne(event.id)}
-                                                                style={{ ...s.deleteRowBtn, opacity: isHovered ? 1 : 0 }}
-                                                                title="Supprimer"
-                                                            >
-                                                                <DeleteOutlined style={{ fontSize: "13px", color: "#A32D2D" }} />
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
+                                                    return (
+                                                        <tr
+                                                            key={rowKey}
+                                                            style={{ ...s.row, backgroundColor: rowBg }}
+                                                            onMouseEnter={() => setHoveredRow(rowKey)}
+                                                            onMouseLeave={() => setHoveredRow(null)}
+                                                        >
+                                                            <td style={{ ...s.td, textAlign: "center", width: 44 }} onClick={e => e.stopPropagation()}>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isSelected}
+                                                                    onChange={() => toggleOne(rowKey)}
+                                                                    style={s.checkbox}
+                                                                />
+                                                            </td>
+                                                            <td style={{ ...s.td, ...s.tdId }} onClick={() => setSelectedEvent({ ...event, _activeTheme: theme })}>
+                                                                #{typeof event.id === "string" ? event.id.substring(0, 7) : event.id}…
+                                                            </td>
+                                                            <td style={{ ...s.td, textAlign: "left" }} onClick={() => setSelectedEvent({ ...event, _activeTheme: theme })}>
+                                                                {theme.theme
+                                                                    ? <span style={{ ...s.themeBadge, backgroundColor: palette.bg, color: palette.color, borderColor: palette.border }}>
+                                                                        {theme.theme.substring(0, 48)}
+                                                                      </span>
+                                                                    : <span style={s.naText}>—</span>}
+                                                            </td>
+                                                            <td style={{ ...s.td, textAlign: "left" }} onClick={() => setSelectedEvent({ ...event, _activeTheme: theme })}>
+                                                                {event.famille
+                                                                    ? <span style={s.famillebadge}>{event.famille}</span>
+                                                                    : <span style={s.naText}>—</span>}
+                                                            </td>
+                                                            <td style={{ ...s.td, ...s.tdDate }} onClick={() => setSelectedEvent({ ...event, _activeTheme: theme })}>
+                                                                {fmtDate(event.genereLe)}
+                                                            </td>
+                                                            <td style={{ ...s.td, ...s.tdSummary }} onClick={() => setSelectedEvent({ ...event, _activeTheme: theme })}>
+                                                                {(theme.contenuFr ?? theme.contenu_fr ?? "").substring(0, 110)}
+                                                            </td>
+                                                            <td style={{ ...s.td, textAlign: "center" }} onClick={e => e.stopPropagation()}>
+                                                                <button
+                                                                    onClick={() => confirmDeleteOne(event.id)}
+                                                                    style={{ ...s.deleteRowBtn, opacity: isHovered ? 1 : 0 }}
+                                                                    title="Supprimer"
+                                                                >
+                                                                    <DeleteOutlined style={{ fontSize: "13px", color: "#A32D2D" }} />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })
+                                            )}
                                         </tbody>
                                     </table>
                                 </div>
 
-                                {/* pagination */}
                                 <div style={s.pagination}>
                                     <button onClick={() => setPage(p => p - 1)} disabled={page === 0}
                                         style={{ ...s.pageBtn, opacity: page === 0 ? 0.4 : 1 }}>
@@ -275,7 +296,6 @@ const MarketEventsSummaryPage = () => {
     );
 };
 
-/* styles — identiques, select supprimé */
 const s = {
     page:           { minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#F8FAFC", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" },
     body:           { display: "flex", flex: 1, overflow: "hidden" },
@@ -289,12 +309,7 @@ const s = {
     toolbarRight:   { display: "flex", alignItems: "center", gap: "10px" },
     searchWrap:     { position: "relative", display: "flex", alignItems: "center" },
     searchIcon:     { position: "absolute", left: "10px", width: "14px", height: "14px", color: "#94A3B8", pointerEvents: "none" },
-    search: {
-        fontSize: "13px", padding: "7px 12px 7px 32px",
-        border: "1px solid #E2E8F0", borderRadius: "8px",
-        width: "260px", outline: "none", color: "#0F172A",
-        backgroundColor: "#FAFAFA",
-    },
+    search:         { fontSize: "13px", padding: "7px 12px 7px 32px", border: "1px solid #E2E8F0", borderRadius: "8px", width: "260px", outline: "none", color: "#0F172A", backgroundColor: "#FAFAFA" },
     countBadge:     { fontSize: "12px", color: "#64748B", fontWeight: "500", backgroundColor: "#F1F5F9", padding: "4px 10px", borderRadius: "20px", border: "1px solid #E2E8F0" },
     deleteBulkBtn:  { display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", padding: "6px 13px", backgroundColor: "#FEF2F2", color: "#A32D2D", border: "1px solid #FECACA", borderRadius: "8px", cursor: "pointer", fontWeight: "500" },
     tableWrap:      { overflowX: "auto" },
@@ -307,6 +322,7 @@ const s = {
     tdDate:         { color: "#94A3B8", fontSize: "12px", fontWeight: "500", textAlign: "center" },
     tdSummary:      { color: "#475569", fontWeight: "400", textAlign: "left" },
     themeBadge:     { display: "inline-block", padding: "3px 9px", borderRadius: "6px", fontSize: "11.5px", fontWeight: "500", border: "1px solid", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+    famillebadge:   { display: "inline-block", padding: "3px 9px", borderRadius: "6px", fontSize: "11.5px", fontWeight: "500", border: "1px solid", backgroundColor: "#F0FDF4", color: "#15803D", borderColor: "#BBF7D0", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
     naText:         { color: "#CBD5E1" },
     checkbox:       { width: "15px", height: "15px", accentColor: "#2563EB", cursor: "pointer" },
     deleteRowBtn:   { background: "none", border: "1px solid #FECACA", cursor: "pointer", borderRadius: "6px", padding: "4px 6px", display: "flex", alignItems: "center", justifyContent: "center", transition: "opacity 0.15s", backgroundColor: "#FEF2F2" },

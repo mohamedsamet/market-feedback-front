@@ -9,31 +9,17 @@ import { DeleteOutlined } from '@ant-design/icons';
 /* ─── helpers ─────────────────────────────────────────────────────────────── */
 const cleanContent = (raw) => {
     if (!raw) return "N/A";
-    let text = raw;
-
-    // 1. Format REST : description=..., url=
-    const restDescMatch = text.match(/description=(.+?),\s*url=/s);
-    if (restDescMatch) return restDescMatch[1].trim();
-
-    // 2. Format RSS flux complet : chercher dans item=[{
-    const itemSection = text.includes("item=[{")
-        ? text.substring(text.indexOf("item=[{"))
-        : text;
-    const descMatch = itemSection.match(/description=([^,}\]]+)/);
+    // Extraire le title= depuis la string Java
+    const titleMatch = raw.match(/title=(.+?),\s*description=/s);
+    if (titleMatch) return titleMatch[1].trim();
+    // Fallback description
+    const descMatch = raw.match(/description=(.+?),\s*url=/s);
     if (descMatch) return descMatch[1].trim();
-
-    // 3. Format JSON pur
     try {
-        const parsed = JSON.parse(text);
-        return parsed.description || parsed.content || parsed.text || parsed.title || text;
-    } catch (_) { }
-
-    // 4. HTML <p>
-    const htmlMatch = text.match(/<p[^>]*>(.*?)<\/p>/is);
-    if (htmlMatch) return htmlMatch[1].replace(/<[^>]+>/g, "").trim();
-
-    // 5. Fallback
-    return text.length > 5 ? text : "N/A";
+        const parsed = JSON.parse(raw);
+        return parsed.title || parsed.description || parsed.content || raw;
+    } catch (_) {}
+    return raw.length > 5 ? raw : "N/A";
 };
 
 const hostname = (url) => { try { return new URL(url).hostname; } catch { return "N/A"; } };
